@@ -1,0 +1,2605 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<!--
+   ______                            __
+  / ____/___  ____ ___  ____  __  __/ /____  _____
+ / /   / __ \/ __ `__ \/ __ \/ / / / __/ _ \/ ___/
+/ /___/ /_/ / / / / / / /_/ / /_/ / /_/  __/ /
+\____/\____/_/ /_/ /_/ .___/\__,_/\__/\___/_/
+                    /_/
+        Created with Perplexity Computer
+        https://www.perplexity.ai/computer
+-->
+
+<!-- Perplexity Computer Attribution — SEO Meta Tags -->
+<meta name="generator" content="Perplexity Computer">
+<meta name="author" content="Perplexity Computer">
+<meta property="og:see_also" content="https://www.perplexity.ai/computer">
+<link rel="author" href="https://www.perplexity.ai/computer">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BarrelVision — MLB Statcast Batter Analytics</title>
+<meta name="description" content="Advanced MLB Statcast batter analytics dashboard. Exit velocity, launch angle, barrel rates, and prop projections.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style type="text/tailwindcss">
+@theme {
+  --color-bg: #0a0e17;
+  --color-surface: #111827;
+  --color-surface-2: #1a1f2e;
+  --color-surface-3: #1e2538;
+  --color-border: rgba(255,255,255,0.08);
+  --color-border-accent: rgba(59,130,246,0.3);
+  --color-blue: #3b82f6;
+  --color-blue-dim: rgba(59,130,246,0.15);
+  --color-green: #22c55e;
+  --color-green-dim: rgba(34,197,94,0.15);
+  --color-orange: #f97316;
+  --color-orange-dim: rgba(249,115,22,0.15);
+  --color-red: #ef4444;
+  --color-red-dim: rgba(239,68,68,0.15);
+  --color-text: #e5e7eb;
+  --color-text-muted: #9ca3af;
+  --color-text-faint: #6b7280;
+  --font-body: 'Inter', system-ui, sans-serif;
+}
+</style>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { height: 100%; margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #0a0e17; color: #e5e7eb; }
+  body { overflow: hidden; }
+  
+  .tabular-nums { font-variant-numeric: tabular-nums lining-nums; }
+  
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+  
+  /* Skeleton animation */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #1a1f2e 25%, #252b3d 50%, #1a1f2e 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 4px;
+  }
+  
+  /* Tooltip */
+  .recharts-tooltip-wrapper { z-index: 50 !important; }
+  .recharts-default-tooltip { 
+    background: #1a1f2e !important; 
+    border: 1px solid rgba(255,255,255,0.1) !important; 
+    border-radius: 6px !important;
+    font-size: 12px !important;
+  }
+  .recharts-tooltip-label { color: #9ca3af !important; font-size: 11px !important; }
+  .recharts-tooltip-item { color: #e5e7eb !important; }
+  .recharts-cartesian-grid line { stroke: rgba(255,255,255,0.05) !important; }
+  
+  /* Transitions */
+  .nav-link { transition: color 0.18s cubic-bezier(0.16,1,0.3,1), background 0.18s cubic-bezier(0.16,1,0.3,1); }
+  .card-hover { transition: border-color 0.18s cubic-bezier(0.16,1,0.3,1), transform 0.18s cubic-bezier(0.16,1,0.3,1); }
+  .card-hover:hover { border-color: rgba(59,130,246,0.3); }
+  
+  /* Table */
+  .data-table th { position: sticky; top: 0; z-index: 1; background: #111827; }
+  .data-table tr { transition: background 0.12s ease; }
+  .data-table tbody tr:hover { background: rgba(59,130,246,0.06); }
+  .data-table tbody tr { cursor: pointer; }
+  
+  /* Active tab */
+  .tab-active { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
+  .tab-inactive { color: #9ca3af; border-bottom: 2px solid transparent; }
+  .tab-inactive:hover { color: #e5e7eb; }
+  
+  /* Search dropdown */
+  .search-dropdown { max-height: 300px; overflow-y: auto; }
+  .search-result-active { background: rgba(59,130,246,0.12) !important; }
+  
+  /* Fade in */
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .fade-in { animation: fadeIn 0.3s ease forwards; }
+
+  /* Mobile nav */
+  @media (max-width: 768px) {
+    .desktop-nav { display: none !important; }
+    .mobile-nav { display: flex !important; }
+  }
+  @media (min-width: 769px) {
+    .desktop-nav { display: flex !important; }
+    .mobile-nav { display: none !important; }
+  }
+
+  /* Pill button */
+  .pill-btn { transition: all 0.18s cubic-bezier(0.16,1,0.3,1); }
+  .pill-btn:hover { background: rgba(59,130,246,0.1); color: #e5e7eb; }
+
+  /* Heatmap cell tooltip */
+  .heatmap-cell { position: relative; }
+  .heatmap-cell .hm-tip { 
+    display: none; position: absolute; z-index: 20; 
+    bottom: 100%; left: 50%; transform: translateX(-50%); 
+    background: #1a1f2e; border: 1px solid rgba(255,255,255,0.1); 
+    border-radius: 6px; padding: 4px 8px; font-size: 11px; white-space: nowrap;
+    pointer-events: none; color: #e5e7eb;
+  }
+  .heatmap-cell:hover .hm-tip { display: block; }
+
+  /* Range slider styling */
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    background: transparent; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-track {
+    height: 4px; background: #1e2538; border-radius: 2px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    background: #3b82f6; border-radius: 50%; margin-top: -5px;
+    border: 2px solid #0a0e17;
+  }
+  input[type="range"]::-moz-range-track {
+    height: 4px; background: #1e2538; border-radius: 2px; border: none;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px; background: #3b82f6;
+    border-radius: 50%; border: 2px solid #0a0e17;
+  }
+
+  /* Recharts brush styling */
+  .recharts-brush-slide { fill: rgba(59,130,246,0.15) !important; stroke: rgba(59,130,246,0.3) !important; }
+  .recharts-brush-traveller rect { fill: #3b82f6 !important; }
+  .recharts-brush rect:first-child { fill: #111827 !important; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "recharts": "https://esm.sh/recharts@2.15.3?bundle&deps=react@18.3.1,react-dom@18.3.1"
+  }
+}
+</script>
+
+<script type="module">
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, Cell, Legend, Brush, ReferenceLine, LineChart, Line, AreaChart, Area } from 'recharts';
+
+const { useState, useEffect, useCallback, useRef, useMemo, createElement: h, Fragment } = React;
+
+// ── API Configuration ─────────────────────────────────────
+// API calls go to /api/* on the same domain.
+// Netlify proxies these to the Render backend via netlify.toml redirects.
+const API = '/api';
+
+// ─── Utility ────────────────────────────────────────
+function api(path) {
+  return fetch(`${API}${path}`).then(r => {
+    if (!r.ok) throw new Error(`API ${r.status}`);
+    return r.json();
+  });
+}
+
+function fmt(v, d=2) {
+  if (v == null) return '—';
+  return typeof v === 'number' ? (v < 1 && v > 0 ? v.toFixed(3).replace(/^0/,'') : v.toFixed(d)) : v;
+}
+
+function pct(v) { return v == null ? '—' : (v * 100).toFixed(1) + '%'; }
+function fmtPct(v) { return v == null ? '—' : v.toFixed(1) + '%'; }
+
+function getHash() { return window.location.hash.slice(1) || '/'; }
+
+function navigate(path) {
+  window.location.hash = path;
+}
+
+// Edge chip component
+function EdgeChip({ edge }) {
+  if (edge == null) return h('span', { className: 'text-text-faint text-[11px]' }, '—');
+  const isPositive = edge >= 0;
+  const isStrong = edge >= 0.3;
+  const chipClass = edge < 0
+    ? 'bg-red-dim text-red'
+    : (isStrong ? 'bg-green-dim text-green' : 'bg-orange-dim text-orange');
+  const sign = isPositive ? '+' : '';
+  return h('span', {
+    className: `inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums ${chipClass}`
+  }, sign + edge.toFixed(2));
+}
+
+// Tooltip style constant
+const ttStyle = { background: '#1a1f2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, fontSize: 12 };
+
+// ─── Feature 8: Metric Explainers ────────────────────
+const METRIC_EXPLANATIONS = {
+  'EV': 'Exit Velocity — the speed of the ball off the bat in mph. Higher EV means harder contact. League avg ~88 mph.',
+  'Avg EV': 'Average Exit Velocity — mean speed off the bat for all batted ball events. League avg ~88 mph.',
+  'Hard%': 'Hard Hit Rate — percentage of batted balls with exit velocity ≥ 95 mph. More hard contact = better results.',
+  'Barrel%': 'Barrel Rate — percentage of batted balls with ideal EV+LA combo (≥98 mph, 26-30° at 98, wider at higher EV). Barrels hit .822 AVG.',
+  'xwOBA': 'Expected Weighted On-Base Average — uses EV and launch angle to estimate expected value per plate appearance. Best single predictor of future offense.',
+  'K%': 'Strikeout Rate — percentage of plate appearances ending in a strikeout. Lower is generally better for hitters.',
+  'BB%': 'Walk Rate — percentage of plate appearances ending in a walk. Higher indicates better plate discipline.',
+  'Sweet%': 'Sweet Spot Rate — percentage of batted balls in the 8-32° launch angle range, where line drives and productive fly balls live.',
+  'xBA': 'Expected Batting Average — what a hitter\'s AVG "should be" based on quality of contact, removing luck and defense.',
+  'xSLG': 'Expected Slugging — predicted slugging percentage based on exit velocity and launch angle of batted balls.',
+  'HR': 'Home Runs — total home runs hit in the season.',
+  'AVG': 'Batting Average — hits divided by at-bats. Traditional measure of hitting ability.',
+  'OBP': 'On-Base Percentage — how often a batter reaches base (hits + walks + HBP) / plate appearances.',
+  'SLG': 'Slugging Percentage — total bases divided by at-bats. Measures power by weighting extra-base hits.',
+  'PA': 'Plate Appearances — total times a batter has come to the plate.'
+};
+
+function InfoIcon({ metricKey }) {
+  const [show, setShow] = useState(false);
+  const ref = useRef(null);
+  const explanation = METRIC_EXPLANATIONS[metricKey];
+  if (!explanation) return null;
+
+  return h('span', {
+    ref,
+    className: 'relative inline-flex items-center ml-0.5 cursor-help',
+    onMouseEnter: () => setShow(true),
+    onMouseLeave: () => setShow(false),
+    onClick: (e) => { e.stopPropagation(); setShow(!show); }
+  },
+    h('span', {
+      className: 'inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-blue-dim text-blue text-[9px] font-bold leading-none'
+    }, 'ℹ'),
+    show && h('div', {
+      className: 'absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-52 p-2 bg-surface-2 border border-border rounded-lg shadow-xl text-[11px] text-text-muted leading-relaxed z-50',
+      style: { pointerEvents: 'none' }
+    },
+      h('div', { className: 'text-[10px] font-semibold text-blue mb-0.5' }, metricKey),
+      explanation
+    )
+  );
+}
+
+// ─── Feature 8: Guided Tour ─────────────────────────
+const TOUR_STEPS = [
+  { target: '[data-tour="kpis"]', title: 'Dashboard KPIs', desc: 'Key league-wide metrics at a glance: total batters, average exit velocity, barrel rate, and home run totals.', pos: 'bottom' },
+  { target: '[data-tour="hitters-filters"]', title: 'Hitter Filters', desc: 'Filter the hitter table by name, team, batting hand, and minimum plate appearances.', pos: 'bottom' },
+  { target: '[data-tour="detail-tabs"]', title: 'Detail Tabs', desc: 'Explore contact quality, count/pitch splits, spray charts, props, and game timeline for each hitter.', pos: 'bottom' },
+  { target: '[data-tour="props-table"]', title: 'Props Explorer', desc: 'Today\'s player props with edges calculated from our projection model. Filter by market, team, and minimum edge.', pos: 'top' },
+  { target: '[data-tour="weather"]', title: 'Gameday Weather', desc: 'Real-time weather conditions for each ballpark. Wind and temperature can significantly affect batted ball outcomes.', pos: 'bottom' }
+];
+
+function GuidedTour({ active, onClose }) {
+  const [step, setStep] = useState(0);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0, height: 0 });
+
+  useEffect(() => {
+    if (!active) { setStep(0); return; }
+    const updatePos = () => {
+      const el = document.querySelector(TOUR_STEPS[step]?.target);
+      if (el) {
+        const r = el.getBoundingClientRect();
+        setPos({ top: r.top, left: r.left, width: r.width, height: r.height });
+      } else {
+        setPos({ top: window.innerHeight / 2 - 50, left: window.innerWidth / 2 - 100, width: 200, height: 40 });
+      }
+    };
+    updatePos();
+    window.addEventListener('resize', updatePos);
+    return () => window.removeEventListener('resize', updatePos);
+  }, [active, step]);
+
+  if (!active) return null;
+  const s = TOUR_STEPS[step];
+  if (!s) return null;
+
+  const tooltipTop = s.pos === 'bottom' ? pos.top + pos.height + 12 : pos.top - 140;
+  const tooltipLeft = Math.max(16, Math.min(window.innerWidth - 300, pos.left + pos.width / 2 - 140));
+
+  return h('div', { className: 'fixed inset-0 z-[9999]' },
+    // Backdrop
+    h('div', {
+      className: 'absolute inset-0 bg-black/60',
+      onClick: onClose
+    }),
+    // Highlight
+    h('div', {
+      className: 'absolute border-2 border-blue rounded-lg pointer-events-none transition-all duration-300',
+      style: {
+        top: pos.top - 4, left: pos.left - 4,
+        width: pos.width + 8, height: pos.height + 8,
+        boxShadow: '0 0 0 9999px rgba(0,0,0,0.5), 0 0 20px rgba(59,130,246,0.4)'
+      }
+    }),
+    // Tooltip
+    h('div', {
+      className: 'absolute bg-surface-2 border border-blue/40 rounded-xl p-4 shadow-2xl w-[280px] transition-all duration-300',
+      style: { top: tooltipTop, left: tooltipLeft }
+    },
+      h('div', { className: 'flex items-center justify-between mb-2' },
+        h('span', { className: 'text-[11px] text-text-faint' }, `${step + 1} of ${TOUR_STEPS.length}`),
+        h('button', { className: 'text-text-faint hover:text-text text-[16px] leading-none', onClick: onClose }, '✕')
+      ),
+      h('h4', { className: 'text-[14px] font-bold text-text mb-1' }, s.title),
+      h('p', { className: 'text-[12px] text-text-muted leading-relaxed mb-3' }, s.desc),
+      h('div', { className: 'flex items-center justify-between' },
+        step > 0
+          ? h('button', {
+              className: 'px-3 py-1 text-[12px] rounded bg-surface-3 text-text-muted hover:text-text border border-border',
+              onClick: () => setStep(step - 1)
+            }, '← Back')
+          : h('span'),
+        step < TOUR_STEPS.length - 1
+          ? h('button', {
+              className: 'px-3 py-1 text-[12px] rounded bg-blue text-white font-medium',
+              onClick: () => setStep(step + 1)
+            }, 'Next →')
+          : h('button', {
+              className: 'px-3 py-1 text-[12px] rounded bg-green text-white font-medium',
+              onClick: onClose
+            }, 'Finish ✓')
+      )
+    )
+  );
+}
+
+// ─── SVG Logo ───────────────────────────────────────
+function Logo({ size = 28 }) {
+  return h('svg', { width: size, height: size, viewBox: '0 0 32 32', fill: 'none', 'aria-label': 'BarrelVision' },
+    h('circle', { cx: 16, cy: 16, r: 14, stroke: '#3b82f6', strokeWidth: 1.5 }),
+    h('circle', { cx: 16, cy: 16, r: 9, stroke: '#3b82f6', strokeWidth: 1 }),
+    h('circle', { cx: 16, cy: 16, r: 4, fill: '#3b82f6', opacity: 0.9 }),
+    h('line', { x1: 16, y1: 0, x2: 16, y2: 8, stroke: '#3b82f6', strokeWidth: 1, opacity: 0.6 }),
+    h('line', { x1: 16, y1: 24, x2: 16, y2: 32, stroke: '#3b82f6', strokeWidth: 1, opacity: 0.6 }),
+    h('line', { x1: 0, y1: 16, x2: 8, y2: 16, stroke: '#3b82f6', strokeWidth: 1, opacity: 0.6 }),
+    h('line', { x1: 24, y1: 16, x2: 32, y2: 16, stroke: '#3b82f6', strokeWidth: 1, opacity: 0.6 }),
+    h('circle', { cx: 16, cy: 16, r: 2, fill: '#0a0e17' })
+  );
+}
+
+// ─── Skeleton ───────────────────────────────────────
+function Skeleton({ w = '100%', hh = 16, className = '' }) {
+  return h('div', { className: `skeleton ${className}`, style: { width: w, height: hh } });
+}
+
+function KPISkeleton() {
+  return h('div', { className: 'grid grid-cols-2 lg:grid-cols-4 gap-3' },
+    ...[1,2,3,4].map(i => h('div', { key: i, className: 'bg-surface rounded-lg p-4 border border-border' },
+      h(Skeleton, { w: '60%', hh: 12, className: 'mb-3' }),
+      h(Skeleton, { w: '40%', hh: 28 })
+    ))
+  );
+}
+
+function TableSkeleton({ rows = 8 }) {
+  return h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+    h(Skeleton, { w: '30%', hh: 16, className: 'mb-4' }),
+    ...[...Array(rows)].map((_, i) => h('div', { key: i, className: 'flex gap-4 mb-3' },
+      h(Skeleton, { w: '20%', hh: 14 }),
+      h(Skeleton, { w: '15%', hh: 14 }),
+      h(Skeleton, { w: '10%', hh: 14 }),
+      h(Skeleton, { w: '10%', hh: 14 })
+    ))
+  );
+}
+
+function ChartSkeleton() {
+  return h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+    h(Skeleton, { w: '40%', hh: 14, className: 'mb-4' }),
+    h(Skeleton, { w: '100%', hh: 200 })
+  );
+}
+
+// ─── KPI Card ───────────────────────────────────────
+function KPICard({ label, value, icon, color = 'blue' }) {
+  const colors = { blue: 'text-blue bg-blue-dim', green: 'text-green bg-green-dim', orange: 'text-orange bg-orange-dim', red: 'text-red bg-red-dim' };
+  return h('div', { className: 'bg-surface rounded-lg p-4 border border-border card-hover' },
+    h('div', { className: 'flex items-center justify-between mb-2' },
+      h('span', { className: 'text-[12px] text-text-muted uppercase tracking-wider font-medium' }, label),
+      icon && h('span', { className: `text-[11px] px-1.5 py-0.5 rounded ${colors[color]}` }, icon)
+    ),
+    h('div', { className: 'text-[24px] font-bold tabular-nums text-text' }, value)
+  );
+}
+
+// ─── Navbar ─────────────────────────────────────────
+function Navbar({ onTourStart, compareCount }) {
+  const [hash, setHash] = useState(getHash());
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState([]);
+  const [showResults, setShowResults] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const searchRef = useRef(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const fn = () => { setHash(getHash()); setMobileMenuOpen(false); };
+    window.addEventListener('hashchange', fn);
+    return () => window.removeEventListener('hashchange', fn);
+  }, []);
+
+  useEffect(() => {
+    if (search.length < 2) { setResults([]); setActiveIdx(-1); return; }
+    const t = setTimeout(() => {
+      api(`/batters?name=${encodeURIComponent(search)}&page_size=8`).then(d => {
+        setResults(d.items || []);
+        setShowResults(true);
+        setActiveIdx(-1);
+      }).catch(() => {});
+    }, 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    const fn = (e) => { if (searchRef.current && !searchRef.current.contains(e.target)) setShowResults(false); };
+    document.addEventListener('mousedown', fn);
+    return () => document.removeEventListener('mousedown', fn);
+  }, []);
+
+  const handleSearchKey = (e) => {
+    if (!showResults || results.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIdx(prev => (prev + 1) % results.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIdx(prev => (prev <= 0 ? results.length - 1 : prev - 1));
+    } else if (e.key === 'Enter' && activeIdx >= 0) {
+      e.preventDefault();
+      const b = results[activeIdx];
+      navigate(`/hitters/${b.batter_id}`);
+      setSearch('');
+      setShowResults(false);
+      setActiveIdx(-1);
+    } else if (e.key === 'Escape') {
+      setShowResults(false);
+      setActiveIdx(-1);
+    }
+  };
+
+  // Highlight matching text in search results
+  function highlightMatch(name, query) {
+    if (!query || query.length < 2) return h('span', { className: 'text-text font-medium' }, name);
+    const lower = name.toLowerCase();
+    const qLower = query.toLowerCase();
+    const idx = lower.indexOf(qLower);
+    if (idx === -1) return h('span', { className: 'text-text font-medium' }, name);
+    return h('span', { className: 'text-text font-medium' },
+      name.slice(0, idx),
+      h('span', { className: 'text-blue font-bold' }, name.slice(idx, idx + query.length)),
+      name.slice(idx + query.length)
+    );
+  }
+
+  const links = [
+    { path: '/', label: 'Dashboard' },
+    { path: '/hitters', label: 'Hitters' },
+    { path: '/props', label: 'Props' },
+    { path: '/compare', label: compareCount > 0 ? `Compare (${compareCount})` : 'Compare' },
+    { path: '/about', label: 'About' }
+  ];
+
+  const isActive = (p) => {
+    if (p === '/') return hash === '/' || hash === '';
+    return hash.startsWith(p);
+  };
+
+  return h('nav', { className: 'sticky top-0 z-50 bg-bg/80 backdrop-blur-xl border-b border-border' },
+    h('div', { className: 'max-w-[1400px] mx-auto px-4 h-12 flex items-center gap-4' },
+      // Logo
+      h('a', { href: '#/', className: 'flex items-center gap-2 shrink-0', onClick: () => navigate('/') },
+        h(Logo, { size: 24 }),
+        h('span', { className: 'text-[15px] font-bold text-text hidden sm:inline' }, 'Barrel'),
+        h('span', { className: 'text-[15px] font-bold text-blue hidden sm:inline' }, 'Vision')
+      ),
+
+      // Desktop nav links
+      h('div', { className: 'desktop-nav items-center gap-1' },
+        ...links.map(l => h('a', {
+          key: l.path, href: `#${l.path}`,
+          className: `nav-link text-[13px] font-medium px-2.5 py-1 rounded ${isActive(l.path) ? 'text-blue bg-blue-dim' : 'text-text-muted hover:text-text'}`,
+        }, l.label)),
+        h('button', {
+          className: 'nav-link text-[13px] font-medium px-2.5 py-1 rounded text-text-muted hover:text-text',
+          onClick: onTourStart
+        }, '🎯 Tour')
+      ),
+
+      // Search
+      h('div', { ref: searchRef, className: 'relative flex-1 max-w-xs ml-auto' },
+        h('input', {
+          type: 'text',
+          placeholder: 'Search batters...',
+          value: search,
+          onChange: (e) => setSearch(e.target.value),
+          onFocus: () => results.length > 0 && setShowResults(true),
+          onKeyDown: handleSearchKey,
+          className: 'w-full bg-surface-2 border border-border rounded-md px-3 py-1.5 text-[13px] text-text placeholder:text-text-faint outline-none focus:border-blue/50 transition-colors'
+        }),
+        showResults && h('div', { className: 'search-dropdown absolute top-full mt-1 left-0 right-0 bg-surface-2 border border-border rounded-lg shadow-xl overflow-hidden' },
+          results.length === 0 && search.length >= 2
+            ? h('div', { className: 'px-3 py-3 text-[13px] text-text-faint text-center' }, 'No results found')
+            : results.map((b, i) => h('button', {
+                key: b.batter_id,
+                className: `w-full text-left px-3 py-2 text-[13px] hover:bg-blue-dim flex items-center gap-2 transition-colors ${i === activeIdx ? 'search-result-active' : ''}`,
+                onClick: () => { navigate(`/hitters/${b.batter_id}`); setSearch(''); setShowResults(false); setActiveIdx(-1); },
+                onMouseEnter: () => setActiveIdx(i)
+              },
+                highlightMatch(b.full_name, search),
+                h('span', { className: 'text-text-faint text-[11px]' }, `${b.team} · ${b.position}`)
+              ))
+        )
+      ),
+
+      // Mobile menu button
+      h('button', {
+        className: 'mobile-nav hidden items-center justify-center w-8 h-8 text-text-muted hover:text-text',
+        onClick: () => setMobileMenuOpen(!mobileMenuOpen),
+        'aria-label': 'Toggle menu'
+      },
+        h('svg', { width: 20, height: 20, viewBox: '0 0 20 20', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 },
+          mobileMenuOpen
+            ? h(Fragment, null, h('line', { x1: 4, y1: 4, x2: 16, y2: 16 }), h('line', { x1: 16, y1: 4, x2: 4, y2: 16 }))
+            : h(Fragment, null, h('line', { x1: 3, y1: 6, x2: 17, y2: 6 }), h('line', { x1: 3, y1: 10, x2: 17, y2: 10 }), h('line', { x1: 3, y1: 14, x2: 17, y2: 14 }))
+        )
+      )
+    ),
+
+    // Mobile dropdown
+    mobileMenuOpen && h('div', { className: 'mobile-nav md:hidden border-t border-border bg-surface p-2 flex flex-col gap-1' },
+      ...links.map(l => h('a', {
+        key: l.path, href: `#${l.path}`,
+        className: `text-[13px] font-medium px-3 py-2 rounded ${isActive(l.path) ? 'text-blue bg-blue-dim' : 'text-text-muted hover:text-text'}`,
+        onClick: () => setMobileMenuOpen(false)
+      }, l.label))
+    )
+  );
+}
+
+// ─── Dashboard Page ─────────────────────────────────
+function DashboardPage() {
+  const [season, setSeason] = useState(2025);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    api(`/dashboard?season=${season}`).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, [season]);
+
+  if (loading) return h('div', { className: 'space-y-4 fade-in' },
+    h('div', { className: 'flex items-center justify-between mb-2' },
+      h(Skeleton, { w: 120, hh: 20 }),
+      h(Skeleton, { w: 100, hh: 32 })
+    ),
+    h(KPISkeleton),
+    h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-4' }, h(ChartSkeleton), h(ChartSkeleton)),
+    h(TableSkeleton)
+  );
+
+  if (!data) return h('div', { className: 'text-text-muted text-center py-20' }, 'Failed to load dashboard data.');
+
+  const totalHRs = (data.leaders?.home_runs || []).reduce((s, l) => s + (l.value || 0), 0);
+
+  return h('div', { className: 'space-y-4 fade-in' },
+    // Header
+    h('div', { className: 'flex items-center justify-between flex-wrap gap-2' },
+      h('h1', { className: 'text-[18px] font-bold text-text' }, 'Dashboard'),
+      h('select', {
+        value: season, onChange: e => setSeason(Number(e.target.value)),
+        className: 'bg-surface-2 border border-border rounded-md px-2 py-1 text-[13px] text-text outline-none'
+      },
+        h('option', { value: 2025 }, '2025'),
+        h('option', { value: 2024 }, '2024'),
+        h('option', { value: 2023 }, '2023')
+      )
+    ),
+
+    // KPIs
+    h('div', { className: 'grid grid-cols-2 lg:grid-cols-4 gap-3', 'data-tour': 'kpis' },
+      h(KPICard, { label: 'Total Batters', value: data.total_batters || '—', icon: 'ALL', color: 'blue' }),
+      h(KPICard, { label: 'League Avg EV', value: data.avg_league_ev ? data.avg_league_ev.toFixed(1) + ' mph' : '—', icon: 'EV', color: 'orange' }),
+      h(KPICard, { label: 'Avg Barrel Rate', value: data.avg_league_barrel ? (data.avg_league_barrel * 100).toFixed(1) + '%' : '—', icon: 'BBL', color: 'green' }),
+      h(KPICard, { label: 'Top 10 HRs', value: totalHRs, icon: 'HR', color: 'red' })
+    ),
+
+    // Charts + Weather
+    h('div', { className: 'grid grid-cols-1 lg:grid-cols-3 gap-4' },
+      h('div', { className: 'lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4' },
+        h(DashChart, { title: 'League EV Distribution', data: data.ev_distribution || [], xKey: 'bin_start', yKey: 'count', color: '#f97316', suffix: ' mph' }),
+        h(DashChart, { title: 'League LA Distribution', data: data.la_distribution || [], xKey: 'bin_start', yKey: 'count', color: '#3b82f6', suffix: '°' })
+      ),
+      h(DashboardWeatherWidget)
+    ),
+
+    // Leaderboards
+    h('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4' },
+      h(LeaderList, { title: 'Barrel Rate', items: data.leaders?.barrel_rate || [], suffix: '%' }),
+      h(LeaderList, { title: 'Avg EV', items: data.leaders?.avg_ev || [], suffix: ' mph' }),
+      h(LeaderList, { title: 'xwOBA', items: data.leaders?.xwoba || [], suffix: '' }),
+      h(LeaderList, { title: 'Home Runs', items: data.leaders?.home_runs || [], suffix: '' })
+    )
+  );
+}
+
+function DashChart({ title, data, xKey, yKey, color, suffix }) {
+  return h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+    h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, title),
+    h(ResponsiveContainer, { width: '100%', height: 200 },
+      h(BarChart, { data, margin: { top: 5, right: 5, bottom: 5, left: 5 } },
+        h(CartesianGrid, { strokeDasharray: '3 3', vertical: false }),
+        h(XAxis, { dataKey: xKey, tick: { fontSize: 11, fill: '#6b7280' }, tickFormatter: v => v + (suffix||'') }),
+        h(YAxis, { tick: { fontSize: 11, fill: '#6b7280' }, width: 40 }),
+        h(Tooltip, { contentStyle: ttStyle }),
+        h(Bar, { dataKey: yKey, fill: color, radius: [2,2,0,0], maxBarSize: 30 })
+      )
+    )
+  );
+}
+
+function LeaderList({ title, items, suffix }) {
+  return h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+    h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, title),
+    h('div', { className: 'space-y-1.5' },
+      ...(items || []).slice(0, 10).map((item, i) =>
+        h('button', {
+          key: i,
+          className: 'w-full flex items-center gap-2 text-left px-2 py-1 rounded hover:bg-surface-2 transition-colors',
+          onClick: () => navigate(`/hitters/${item.batter_id}`)
+        },
+          h('span', { className: 'text-[11px] text-text-faint w-5 tabular-nums' }, i + 1),
+          h('span', { className: 'text-[12px] text-text truncate flex-1' }, item.full_name),
+          h('span', { className: 'text-[12px] text-blue font-medium tabular-nums' },
+            typeof item.value === 'number'
+              ? (title === 'Barrel Rate' || title === 'Hard Hit Rate' || title === 'Sweet Spot Rate'
+                ? (item.value * 100).toFixed(1)
+                : (title === 'xwOBA' || title === 'xBA'
+                  ? item.value.toFixed(3).replace(/^0/,'')
+                  : (title === 'Home Runs' ? Math.round(item.value) : item.value.toFixed(1)))) + suffix
+              : item.value + suffix
+          )
+        )
+      )
+    )
+  );
+}
+
+// ─── Hitters List Page ──────────────────────────────
+function HittersPage({ compareIds, setCompareIds }) {
+  const [batters, setBatters] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState('xwoba');
+  const [order, setOrder] = useState('desc');
+  const [filters, setFilters] = useState({ name: '', team: '', bats: '', min_pa: 0 });
+  const [teams, setTeams] = useState([]);
+
+  useEffect(() => { api('/teams').then(setTeams).catch(() => {}); }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    const qs = new URLSearchParams({
+      page: String(page), page_size: '50', sort, order,
+      ...(filters.name && { name: filters.name }),
+      ...(filters.team && { team: filters.team }),
+      ...(filters.bats && { bats: filters.bats }),
+      ...(filters.min_pa && { min_pa: String(filters.min_pa) })
+    });
+    api(`/batters?${qs}`).then(d => {
+      setBatters(d.items || []);
+      setTotal(d.total || 0);
+      setTotalPages(d.total_pages || 1);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [page, sort, order, filters]);
+
+  const handleSort = (col) => {
+    if (sort === col) setOrder(order === 'desc' ? 'asc' : 'desc');
+    else { setSort(col); setOrder('desc'); }
+    setPage(1);
+  };
+
+  const SortArrow = ({ col }) => {
+    if (sort !== col) return null;
+    return h('span', { className: 'text-blue ml-0.5' }, order === 'asc' ? '↑' : '↓');
+  };
+
+  const toggleCompare = (id, e) => {
+    e.stopPropagation();
+    if (!setCompareIds) return;
+    if (compareIds.includes(id)) {
+      setCompareIds(compareIds.filter(x => x !== id));
+    } else if (compareIds.length < 3) {
+      setCompareIds([...compareIds, id]);
+    }
+  };
+
+  const cols = [
+    { key: 'compare', label: '\u2714', w: 'w-8', nosort: true },
+    { key: 'rank', label: '#', w: 'w-10', nosort: true },
+    { key: 'full_name', label: 'Name', w: 'min-w-[150px]', align: 'text-left' },
+    { key: 'team', label: 'Team', w: 'w-14' },
+    { key: 'pa', label: 'PA', w: 'w-12' },
+    { key: 'ba', label: 'AVG', w: 'w-14' },
+    { key: 'obp', label: 'OBP', w: 'w-14' },
+    { key: 'slg', label: 'SLG', w: 'w-14' },
+    { key: 'avg_launch_speed', label: 'Avg EV', w: 'w-16' },
+    { key: 'hard_hit_rate', label: 'Hard%', w: 'w-16' },
+    { key: 'barrel_rate', label: 'Barrel%', w: 'w-16' },
+    { key: 'xwoba', label: 'xwOBA', w: 'w-16' },
+  ];
+
+  return h('div', { className: 'space-y-4 fade-in' },
+    h('h1', { className: 'text-[18px] font-bold text-text' }, 'Hitters'),
+
+    // Filters
+    h('div', { className: 'flex flex-wrap items-center gap-2', 'data-tour': 'hitters-filters' },
+      h('input', {
+        type: 'text', placeholder: 'Search name...',
+        className: 'bg-surface-2 border border-border rounded-md px-3 py-1.5 text-[13px] text-text placeholder:text-text-faint outline-none focus:border-blue/50 w-48',
+        value: filters.name,
+        onChange: e => { setFilters({...filters, name: e.target.value}); setPage(1); }
+      }),
+      h('select', {
+        className: 'bg-surface-2 border border-border rounded-md px-2 py-1.5 text-[13px] text-text outline-none',
+        value: filters.team, onChange: e => { setFilters({...filters, team: e.target.value}); setPage(1); }
+      },
+        h('option', { value: '' }, 'All Teams'),
+        ...teams.map(t => h('option', { key: t, value: t }, t))
+      ),
+      h('div', { className: 'flex items-center gap-1' },
+        ...['', 'L', 'R', 'S'].map(b => h('button', {
+          key: b || 'all',
+          className: `px-2 py-1 text-[12px] rounded font-medium transition-colors ${filters.bats === b ? 'bg-blue text-white' : 'bg-surface-2 text-text-muted border border-border hover:text-text'}`,
+          onClick: () => { setFilters({...filters, bats: b}); setPage(1); }
+        }, b || 'All'))
+      ),
+      h('div', { className: 'flex items-center gap-1.5' },
+        h('span', { className: 'text-[11px] text-text-faint' }, 'Min PA:'),
+        h('input', {
+          type: 'number', min: 0, step: 10, value: filters.min_pa,
+          className: 'bg-surface-2 border border-border rounded-md px-2 py-1 text-[13px] text-text outline-none w-16 tabular-nums',
+          onChange: e => { setFilters({...filters, min_pa: Number(e.target.value) || 0}); setPage(1); }
+        })
+      ),
+      h('span', { className: 'text-[11px] text-text-faint ml-auto' }, `${total} batters`)
+    ),
+
+    // Table
+    loading ? h(TableSkeleton, { rows: 12 }) :
+    h('div', { className: 'bg-surface rounded-lg border border-border overflow-x-auto' },
+      h('table', { className: 'data-table w-full text-[12px]' },
+        h('thead', null,
+          h('tr', { className: 'border-b border-border' },
+            ...cols.map(c => h('th', {
+              key: c.key,
+              className: `px-3 py-2.5 font-semibold text-text-muted text-right cursor-pointer hover:text-text select-none ${c.align || ''} ${c.w || ''}`,
+              onClick: () => !c.nosort && handleSort(c.key)
+            }, c.label, !c.nosort && h(SortArrow, { col: c.key })))
+          )
+        ),
+        h('tbody', null,
+          ...batters.map((b, i) => h('tr', {
+            key: b.batter_id,
+            className: 'border-b border-border/50',
+            onClick: () => navigate(`/hitters/${b.batter_id}`)
+          },
+            h('td', { className: 'px-2 py-2 text-center', onClick: e => e.stopPropagation() },
+              h('input', {
+                type: 'checkbox',
+                checked: (compareIds || []).includes(String(b.batter_id)),
+                onChange: (e) => toggleCompare(String(b.batter_id), e),
+                className: 'w-3.5 h-3.5 accent-blue cursor-pointer',
+                disabled: !(compareIds || []).includes(String(b.batter_id)) && (compareIds || []).length >= 3
+              })
+            ),
+            h('td', { className: 'px-3 py-2 text-text-faint tabular-nums text-right' }, (page-1)*50 + i + 1),
+            h('td', { className: 'px-3 py-2 text-left font-medium text-text' }, b.full_name),
+            h('td', { className: 'px-3 py-2 text-right text-text-muted' }, b.team),
+            h('td', { className: 'px-3 py-2 text-right tabular-nums' }, b.pa),
+            h('td', { className: 'px-3 py-2 text-right tabular-nums' }, b.ba != null ? b.ba.toFixed(3).replace(/^0/,'') : '—'),
+            h('td', { className: 'px-3 py-2 text-right tabular-nums' }, b.obp != null ? b.obp.toFixed(3).replace(/^0/,'') : '—'),
+            h('td', { className: 'px-3 py-2 text-right tabular-nums' }, b.slg != null ? b.slg.toFixed(3).replace(/^0/,'') : '—'),
+            h('td', { className: 'px-3 py-2 text-right tabular-nums font-medium text-orange' }, b.avg_launch_speed ? b.avg_launch_speed.toFixed(1) : '—'),
+            h('td', { className: 'px-3 py-2 text-right tabular-nums' }, b.hard_hit_rate ? (b.hard_hit_rate * 100).toFixed(1) + '%' : '—'),
+            h('td', { className: 'px-3 py-2 text-right tabular-nums font-medium text-green' }, b.barrel_rate ? (b.barrel_rate * 100).toFixed(1) + '%' : '—'),
+            h('td', { className: 'px-3 py-2 text-right tabular-nums font-medium text-blue' }, b.xwoba != null ? b.xwoba.toFixed(3).replace(/^0/,'') : '—')
+          ))
+        )
+      )
+    ),
+
+    // Pagination
+    totalPages > 1 && h('div', { className: 'flex items-center justify-center gap-2' },
+      h('button', {
+        className: 'px-3 py-1 text-[12px] rounded bg-surface-2 border border-border text-text-muted hover:text-text disabled:opacity-30 transition-colors',
+        disabled: page <= 1, onClick: () => setPage(p => p - 1)
+      }, '← Prev'),
+      h('span', { className: 'text-[12px] text-text-muted tabular-nums' }, `${page} / ${totalPages}`),
+      h('button', {
+        className: 'px-3 py-1 text-[12px] rounded bg-surface-2 border border-border text-text-muted hover:text-text disabled:opacity-30 transition-colors',
+        disabled: page >= totalPages, onClick: () => setPage(p => p + 1)
+      }, 'Next →')
+    ),
+
+    // Feature 1: Comparison tray
+    (compareIds || []).length > 0 && h('div', {
+      className: 'fixed bottom-0 left-0 right-0 bg-surface-2 border-t border-border p-3 z-40 flex items-center justify-between'
+    },
+      h('div', { className: 'flex items-center gap-2 flex-wrap' },
+        h('span', { className: 'text-[12px] text-text-muted' }, `${compareIds.length} selected (max 3)`),
+        ...compareIds.map(cid => {
+          const b = batters.find(bt => String(bt.batter_id) === cid);
+          return h('span', { key: cid, className: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-dim text-blue text-[11px] font-medium' },
+            b ? b.full_name : `#${cid}`,
+            h('button', {
+              className: 'ml-0.5 text-blue hover:text-text',
+              onClick: () => setCompareIds(compareIds.filter(x => x !== cid))
+            }, '\u2715')
+          );
+        })
+      ),
+      h('div', { className: 'flex items-center gap-2' },
+        h('button', {
+          className: 'px-3 py-1.5 text-[12px] rounded bg-surface-3 border border-border text-text-muted hover:text-text',
+          onClick: () => setCompareIds([])
+        }, 'Clear'),
+        h('button', {
+          className: 'px-4 py-1.5 text-[12px] rounded bg-blue text-white font-medium disabled:opacity-40',
+          disabled: compareIds.length < 2,
+          onClick: () => navigate('/compare')
+        }, 'Compare \u2192')
+      )
+    )
+  );
+}
+
+// ─── Weather Components ─────────────────────────────
+const ALL_TEAMS = ["ARI","ATL","BAL","BOS","CHC","CIN","CLE","COL","CWS","DET","HOU","KC","LAA","LAD","MIA","MIL","MIN","NYM","NYY","OAK","PHI","PIT","SD","SEA","SF","STL","TB","TEX","TOR","WSH"];
+
+function weatherIcon(forecast, isDaytime) {
+  const f = (forecast || '').toLowerCase();
+  if (f.includes('thunder')) return '⛈️';
+  if (f.includes('rain') || f.includes('shower') || f.includes('drizzle')) return '🌧️';
+  if (f.includes('snow') || f.includes('sleet') || f.includes('ice')) return '🌨️';
+  if (f.includes('fog') || f.includes('haze') || f.includes('mist')) return '🌫️';
+  if (f.includes('cloud') || f.includes('overcast')) return isDaytime ? '⛅' : '☁️';
+  if (f.includes('wind')) return '💨';
+  if (f.includes('clear') || f.includes('sunny') || f.includes('fair')) return isDaytime ? '☀️' : '🌙';
+  return isDaytime ? '🌤️' : '🌙';
+}
+
+function tempColor(temp) {
+  if (temp == null) return 'text-text';
+  if (temp <= 32) return 'text-blue-400';
+  if (temp <= 50) return 'text-sky-400';
+  if (temp <= 70) return 'text-emerald-400';
+  if (temp <= 85) return 'text-amber-400';
+  return 'text-red-400';
+}
+
+function precipBadge(pct) {
+  if (pct == null || pct === 0) return null;
+  const bg = pct >= 70 ? 'bg-red-500/15 text-red-400' : pct >= 40 ? 'bg-amber-500/15 text-amber-400' : 'bg-sky-500/15 text-sky-400';
+  return h('span', { className: `inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${bg}` }, '💧 ', pct + '%');
+}
+
+function WeatherCard({ data, compact }) {
+  if (!data) return null;
+  const { team, ballpark, environment, weather, game_datetime } = data;
+  const isRoof = environment.type === 'roof';
+  const gameDate = game_datetime ? new Date(game_datetime) : null;
+  const gameTimeStr = gameDate ? gameDate.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'TBD';
+
+  const envBadgeCls = isRoof
+    ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/20'
+    : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20';
+
+  // Dome / fixed-roof card (no weather needed)
+  if (isRoof && !weather) {
+    return h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+      h('div', { className: 'flex items-center justify-between mb-3' },
+        h('div', { className: 'flex items-center gap-2' },
+          h('span', { className: 'text-[16px]' }, '🏟️'),
+          h('span', { className: 'text-[13px] font-semibold text-text' }, 'Next Game Environment')
+        ),
+        h('span', { className: `px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${envBadgeCls}` }, environment.label)
+      ),
+      h('div', { className: 'flex items-center gap-3' },
+        h('div', { className: 'text-[32px]' }, '🏠'),
+        h('div', null,
+          h('div', { className: 'text-[14px] font-semibold text-text' }, ballpark.name),
+          h('div', { className: 'text-[12px] text-text-muted mt-0.5' }, gameTimeStr),
+          h('div', { className: 'text-[12px] text-text-faint mt-1' }, 'Climate-controlled dome — weather has no effect')
+        )
+      )
+    );
+  }
+
+  // Outdoor / retractable with weather data
+  const w = weather || {};
+  const icon = weatherIcon(w.shortForecast, w.isDaytime);
+
+  return h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+    h('div', { className: 'flex items-center justify-between mb-3' },
+      h('div', { className: 'flex items-center gap-2' },
+        h('span', { className: 'text-[16px]' }, '🏟️'),
+        h('span', { className: 'text-[13px] font-semibold text-text' }, compact ? ballpark.name : 'Next Game Environment')
+      ),
+      h('span', { className: `px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${envBadgeCls}` }, environment.label)
+    ),
+    h('div', { className: 'flex items-start gap-4' },
+      // Left: big temp + icon
+      h('div', { className: 'flex flex-col items-center min-w-[72px]' },
+        h('span', { className: 'text-[36px] leading-none' }, icon),
+        w.temperature != null
+          ? h('div', { className: `text-[28px] font-bold tabular-nums mt-1 ${tempColor(w.temperature)}` }, w.temperature + '°')
+          : null,
+        w.temperatureUnit && w.temperatureUnit !== 'F'
+          ? h('span', { className: 'text-[10px] text-text-faint' }, w.temperatureUnit)
+          : null
+      ),
+      // Right: details
+      h('div', { className: 'flex-1 min-w-0' },
+        !compact ? h('div', { className: 'text-[14px] font-semibold text-text mb-0.5' }, ballpark.name) : null,
+        h('div', { className: 'text-[12px] text-text-muted' }, gameTimeStr),
+        h('div', { className: 'text-[13px] text-text mt-1.5 font-medium' }, w.shortForecast || 'Forecast unavailable'),
+        h('div', { className: 'flex flex-wrap items-center gap-2 mt-2' },
+          w.windSpeed ? h('span', { className: 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-2 text-[10px] text-text-muted' }, '💨 ', w.windSpeed, w.windDirection ? ' ' + w.windDirection : '') : null,
+          precipBadge(w.probabilityOfPrecipitation)
+        ),
+        environment.type === 'retractable'
+          ? h('div', { className: 'text-[10px] text-text-faint mt-1.5 italic' }, 'Retractable roof — may be closed in poor conditions')
+          : null
+      )
+    )
+  );
+}
+
+function HitterWeatherCard({ batterId }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(false);
+
+  useEffect(() => {
+    setLoading(true); setErr(false);
+    api(`/batters/${batterId}/next-game-environment`)
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => { setErr(true); setLoading(false); });
+  }, [batterId]);
+
+  if (loading) return h('div', { className: 'bg-surface rounded-lg border border-border p-4 animate-pulse' },
+    h('div', { className: 'flex items-center gap-3' },
+      h(Skeleton, { w: 48, hh: 48, className: 'rounded' }),
+      h('div', { className: 'space-y-2' }, h(Skeleton, { w: 180, hh: 14 }), h(Skeleton, { w: 100, hh: 12 }))
+    )
+  );
+  if (err || !data) return null;  // Silently hide if weather unavailable
+
+  return h(WeatherCard, { data });
+}
+
+function DashboardWeatherWidget() {
+  const [team, setTeam] = useState('NYY');
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    api(`/teams/${team}/next-game-environment`)
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [team]);
+
+  return h('div', { className: 'bg-surface rounded-lg border border-border p-4', 'data-tour': 'weather' },
+    h('div', { className: 'flex items-center justify-between mb-3' },
+      h('h3', { className: 'text-[13px] font-semibold text-text-muted' }, 'Gameday Weather'),
+      h('select', {
+        value: team,
+        onChange: e => setTeam(e.target.value),
+        className: 'bg-surface-2 border border-border rounded-md px-2 py-0.5 text-[12px] text-text outline-none cursor-pointer'
+      },
+        ...ALL_TEAMS.map(t => h('option', { key: t, value: t }, t))
+      )
+    ),
+    loading
+      ? h('div', { className: 'flex items-center gap-3 animate-pulse' },
+          h(Skeleton, { w: 56, hh: 56, className: 'rounded' }),
+          h('div', { className: 'space-y-2' }, h(Skeleton, { w: 160, hh: 14 }), h(Skeleton, { w: 120, hh: 12 }), h(Skeleton, { w: 80, hh: 10 }))
+        )
+      : data
+        ? h(WeatherCard, { data, compact: true })
+        : h('div', { className: 'text-[12px] text-text-faint text-center py-4' }, 'Weather data unavailable')
+  );
+}
+
+// ─── Hitter Detail Page ─────────────────────────────
+function HitterDetailPage({ id }) {
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('contact');
+
+  useEffect(() => {
+    setLoading(true);
+    setTab('contact');
+    api(`/batters/${id}/summary`).then(d => { setSummary(d); setLoading(false); }).catch(() => setLoading(false));
+  }, [id]);
+
+  if (loading) return h('div', { className: 'space-y-4 fade-in' },
+    h('div', { className: 'flex items-center gap-4' },
+      h(Skeleton, { w: 72, hh: 72, className: 'rounded-full' }),
+      h('div', { className: 'space-y-2' }, h(Skeleton, { w: 200, hh: 20 }), h(Skeleton, { w: 120, hh: 14 }))
+    ),
+    h(KPISkeleton),
+    h(ChartSkeleton)
+  );
+
+  if (!summary) return h('div', { className: 'text-text-muted text-center py-20' }, 'Player not found.');
+  const s = summary;
+
+  // Compute BB% and K% from raw counts
+  const bbRate = s.pa > 0 && s.walks != null ? (s.walks / s.pa * 100).toFixed(1) + '%' : '—';
+  const kRate = s.pa > 0 && s.strikeouts != null ? (s.strikeouts / s.pa * 100).toFixed(1) + '%' : '—';
+
+  const tabs = [
+    { key: 'contact', label: 'Contact Quality' },
+    { key: 'counts', label: 'Count & Pitch' },
+    { key: 'spray', label: 'Spray & Heatmaps' },
+    { key: 'props', label: 'Props & Projections' },
+    { key: 'timeline', label: 'Timeline' }
+  ];
+
+  return h('div', { className: 'space-y-4 fade-in' },
+    // Player header
+    h('div', { className: 'flex items-center gap-4 bg-surface rounded-lg border border-border p-4' },
+      h('img', {
+        src: s.headshot_url || `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/${id}/headshot/67/current`,
+        alt: s.full_name, className: 'w-16 h-16 rounded-full bg-surface-2 object-cover',
+        onError: (e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect fill="%231a1f2e" width="64" height="64" rx="32"/><text x="32" y="38" text-anchor="middle" fill="%236b7280" font-size="20">?</text></svg>'; }
+      }),
+      h('div', null,
+        h('h1', { className: 'text-[20px] font-bold text-text' }, s.full_name),
+        h('div', { className: 'flex items-center gap-2 text-[13px] text-text-muted' },
+          h('span', null, s.team),
+          h('span', { className: 'text-text-faint' }, '·'),
+          h('span', null, s.position),
+          h('span', { className: 'text-text-faint' }, '·'),
+          h('span', null, `Bats: ${s.bats || '—'}`)
+        )
+      )
+    ),
+
+    // Next Game Weather
+    h(HitterWeatherCard, { batterId: id }),
+
+    // Quick stats
+    h('div', { className: 'grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-2' },
+      ...([
+        ['PA', s.pa], ['AVG', s.ba != null ? s.ba.toFixed(3).replace(/^0/,'') : '—'],
+        ['OBP', s.obp != null ? s.obp.toFixed(3).replace(/^0/,'') : '—'], ['SLG', s.slg != null ? s.slg.toFixed(3).replace(/^0/,'') : '—'],
+        ['HR', s.home_runs], ['BB%', bbRate],
+        ['K%', kRate],
+        ['Avg EV', s.avg_launch_speed ? s.avg_launch_speed.toFixed(1) : '—'],
+        ['Barrel%', s.barrel_rate ? (s.barrel_rate * 100).toFixed(1)+'%' : '—'],
+        ['Hard%', s.hard_hit_rate ? (s.hard_hit_rate * 100).toFixed(1)+'%' : '—'],
+        ['xwOBA', s.xwoba != null ? s.xwoba.toFixed(3).replace(/^0/,'') : '—'],
+        ['Sweet%', s.sweet_spot_rate ? (s.sweet_spot_rate * 100).toFixed(1)+'%' : '—']
+      ]).map(([label, val]) =>
+        h('div', { key: label, className: 'bg-surface rounded-lg border border-border px-2 py-2 text-center' },
+          h('div', { className: 'text-[10px] text-text-faint uppercase tracking-wider flex items-center justify-center gap-0.5' }, label, h(InfoIcon, { metricKey: label })),
+          h('div', { className: 'text-[14px] font-semibold text-text tabular-nums mt-0.5' }, val ?? '—')
+        )
+      )
+    ),
+
+    // Tabs
+    h('div', { className: 'flex gap-0 border-b border-border overflow-x-auto', 'data-tour': 'detail-tabs' },
+      ...tabs.map(t => h('button', {
+        key: t.key,
+        className: `px-4 py-2 text-[13px] font-medium whitespace-nowrap transition-colors ${tab === t.key ? 'tab-active' : 'tab-inactive'}`,
+        onClick: () => setTab(t.key)
+      }, t.label))
+    ),
+
+    // Tab content
+    tab === 'contact' && h(ContactTab, { id }),
+    tab === 'counts' && h(CountsTab, { id }),
+    tab === 'spray' && h(SprayTab, { id }),
+    tab === 'props' && h(PropsTab, { id }),
+    tab === 'timeline' && h(GameTimelineTab, { id })
+  );
+}
+
+// ─── Feature 2: Game Timeline Tab ─────────────────
+function GameTimelineTab({ id }) {
+  const [games, setGames] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [lastN, setLastN] = useState(10);
+  const [expandedPA, setExpandedPA] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    api(`/batters/${id}/games?last_n=${lastN}`).then(d => {
+      setGames(d || []);
+      setLoading(false);
+    }).catch(() => { setGames([]); setLoading(false); });
+  }, [id, lastN]);
+
+  const paResultColor = (result) => {
+    const r = (result || '').toLowerCase();
+    if (r.includes('home_run') || r.includes('homer')) return { bg: 'bg-red', text: 'text-white', label: 'HR' };
+    if (r.includes('triple')) return { bg: 'bg-orange', text: 'text-white', label: '3B' };
+    if (r.includes('double')) return { bg: 'bg-orange', text: 'text-white', label: '2B' };
+    if (r.includes('single')) return { bg: 'bg-green', text: 'text-white', label: '1B' };
+    if (r.includes('walk') || r.includes('bb') || r.includes('hbp')) return { bg: 'bg-blue', text: 'text-white', label: 'BB' };
+    if (r.includes('strikeout') || r.includes('strike')) return { bg: 'bg-surface-3', text: 'text-text-faint', label: 'K' };
+    return { bg: 'bg-surface-3', text: 'text-text-faint', label: 'Out' };
+  };
+
+  if (loading) return h(TableSkeleton, { rows: 6 });
+
+  return h('div', { className: 'space-y-4' },
+    h('div', { className: 'flex items-center justify-between' },
+      h('h3', { className: 'text-[14px] font-semibold text-text' }, 'Game Timeline'),
+      h('div', { className: 'flex items-center gap-1' },
+        ...[7, 15, 30].map(n => h('button', {
+          key: n,
+          className: `px-2.5 py-1 text-[11px] rounded-full font-medium transition-colors ${lastN === n ? 'bg-blue text-white' : 'bg-surface-2 text-text-muted border border-border hover:text-text'}`,
+          onClick: () => setLastN(n)
+        }, `Last ${n}`))
+      )
+    ),
+
+    games.length === 0
+      ? h('div', { className: 'bg-surface rounded-lg border border-border p-8 text-center text-text-faint text-[13px]' }, 'No recent game data available.')
+      : h('div', { className: 'relative' },
+          // Vertical line
+          h('div', { className: 'absolute left-[18px] top-0 bottom-0 w-px bg-border' }),
+          // Games
+          h('div', { className: 'space-y-3' },
+            ...games.map((game, gi) => {
+              const pas = game.plate_appearances || [];
+              return h('div', { key: gi, className: 'relative pl-10' },
+                // Timeline dot
+                h('div', { className: 'absolute left-[13px] top-2 w-[11px] h-[11px] rounded-full bg-blue border-2 border-bg z-10' }),
+                // Game card
+                h('div', { className: 'bg-surface rounded-lg border border-border p-3' },
+                  h('div', { className: 'flex items-center justify-between mb-2' },
+                    h('div', { className: 'text-[13px] font-semibold text-text' },
+                      game.game_date ? new Date(game.game_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Unknown',
+                      h('span', { className: 'text-text-muted font-normal ml-1.5' }, 'vs ', game.opponent || '?')
+                    ),
+                    h('span', { className: 'text-[11px] text-text-faint' }, `${pas.length} PA`)
+                  ),
+                  // PA badges
+                  h('div', { className: 'flex flex-wrap gap-1.5' },
+                    ...pas.map((pa, pi) => {
+                      const rc = paResultColor(pa.result);
+                      const isExpanded = expandedPA === `${gi}-${pi}`;
+                      return h('div', { key: pi, className: 'relative' },
+                        h('button', {
+                          className: `inline-flex items-center justify-center w-8 h-8 rounded-full text-[10px] font-bold transition-all ${rc.bg} ${rc.text} ${isExpanded ? 'ring-2 ring-blue' : 'hover:ring-1 hover:ring-blue/50'}`,
+                          onClick: () => setExpandedPA(isExpanded ? null : `${gi}-${pi}`),
+                          title: pa.result
+                        }, rc.label),
+                        isExpanded && h('div', {
+                          className: 'absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-surface-2 border border-border rounded-lg p-2 shadow-xl z-20 w-36 text-[11px]'
+                        },
+                          h('div', { className: 'text-text-muted' }, 'Inning: ', h('span', { className: 'text-text' }, pa.inning || '—')),
+                          pa.ev != null && h('div', { className: 'text-text-muted' }, 'EV: ', h('span', { className: 'text-orange font-medium' }, pa.ev.toFixed(1), ' mph')),
+                          pa.la != null && h('div', { className: 'text-text-muted' }, 'LA: ', h('span', { className: 'text-blue font-medium' }, pa.la.toFixed(1), '°')),
+                          pa.pitches != null && h('div', { className: 'text-text-muted' }, 'Pitches: ', h('span', { className: 'text-text' }, pa.pitches)),
+                          pa.count_sequence && h('div', { className: 'text-text-muted' }, 'Count: ', h('span', { className: 'text-text' }, pa.count_sequence))
+                        )
+                      );
+                    })
+                  )
+                )
+              );
+            })
+          )
+        )
+  );
+}
+
+// ─── Feature 3: Rolling Form Section ────────────────
+function RollingFormSection({ id }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [rollingWindow, setRollingWindow] = useState(14);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    api(`/batters/${id}/rolling?window=${rollingWindow}`).then(d => {
+      setData(d);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [id, rollingWindow]);
+
+  const rollingData = (data && data.data) || [];
+
+  return h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+    h('div', { className: 'flex items-center justify-between cursor-pointer', onClick: () => setCollapsed(!collapsed) },
+      h('div', { className: 'flex items-center gap-2' },
+        h('span', { className: 'text-[13px] font-semibold text-text' }, 'Rolling Form'),
+        h('span', { className: 'text-[11px] text-text-faint' }, `(${rollingWindow}-game window)`)
+      ),
+      h('div', { className: 'flex items-center gap-2' },
+        !collapsed && h('div', { className: 'flex items-center gap-1' },
+          ...[7, 14, 30].map(w => h('button', {
+            key: w,
+            className: `px-2 py-0.5 text-[10px] rounded-full font-medium transition-colors ${rollingWindow === w ? 'bg-blue text-white' : 'bg-surface-2 text-text-muted border border-border'}`,
+            onClick: (e) => { e.stopPropagation(); setRollingWindow(w); }
+          }, `${w}G`))
+        ),
+        h('span', { className: 'text-text-faint text-[14px]' }, collapsed ? '▶' : '▼')
+      )
+    ),
+    !collapsed && (loading
+      ? h('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-3 mt-3' },
+          h(Skeleton, { w: '100%', hh: 120 }), h(Skeleton, { w: '100%', hh: 120 }), h(Skeleton, { w: '100%', hh: 120 })
+        )
+      : rollingData.length === 0
+        ? h('div', { className: 'text-text-faint text-[12px] text-center py-4 mt-2' }, 'No rolling data available.')
+        : h('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-3 mt-3' },
+            // xwOBA rolling
+            h('div', { className: 'bg-surface-2 rounded-lg p-3' },
+              h('div', { className: 'text-[11px] text-text-muted mb-1 font-medium' }, 'Rolling xwOBA'),
+              h(ResponsiveContainer, { width: '100%', height: 100 },
+                h(AreaChart, { data: rollingData, margin: { top: 5, right: 5, bottom: 5, left: 5 } },
+                  h(XAxis, { dataKey: 'date', hide: true }),
+                  h(YAxis, { hide: true, domain: ['dataMin - 0.02', 'dataMax + 0.02'] }),
+                  h(Tooltip, { contentStyle: ttStyle, formatter: (v) => [v != null ? v.toFixed(3) : '—', 'xwOBA'] }),
+                  h(Area, { type: 'monotone', dataKey: 'xwoba', stroke: '#3b82f6', fill: 'rgba(59,130,246,0.15)', strokeWidth: 2, dot: false })
+                )
+              )
+            ),
+            // Avg EV rolling
+            h('div', { className: 'bg-surface-2 rounded-lg p-3' },
+              h('div', { className: 'text-[11px] text-text-muted mb-1 font-medium' }, 'Rolling Avg EV'),
+              h(ResponsiveContainer, { width: '100%', height: 100 },
+                h(AreaChart, { data: rollingData, margin: { top: 5, right: 5, bottom: 5, left: 5 } },
+                  h(XAxis, { dataKey: 'date', hide: true }),
+                  h(YAxis, { hide: true, domain: ['dataMin - 1', 'dataMax + 1'] }),
+                  h(Tooltip, { contentStyle: ttStyle, formatter: (v) => [v != null ? v.toFixed(1) + ' mph' : '—', 'Avg EV'] }),
+                  h(Area, { type: 'monotone', dataKey: 'avg_ev', stroke: '#f97316', fill: 'rgba(249,115,22,0.15)', strokeWidth: 2, dot: false })
+                )
+              )
+            ),
+            // Barrel rate rolling
+            h('div', { className: 'bg-surface-2 rounded-lg p-3' },
+              h('div', { className: 'text-[11px] text-text-muted mb-1 font-medium' }, 'Rolling Barrel%'),
+              h(ResponsiveContainer, { width: '100%', height: 100 },
+                h(AreaChart, { data: rollingData.map(d => ({ ...d, barrel_pct: d.barrel_rate != null ? d.barrel_rate * 100 : null })), margin: { top: 5, right: 5, bottom: 5, left: 5 } },
+                  h(XAxis, { dataKey: 'date', hide: true }),
+                  h(YAxis, { hide: true, domain: [0, 'dataMax + 2'] }),
+                  h(Tooltip, { contentStyle: ttStyle, formatter: (v) => [v != null ? v.toFixed(1) + '%' : '—', 'Barrel%'] }),
+                  h(Area, { type: 'monotone', dataKey: 'barrel_pct', stroke: '#22c55e', fill: 'rgba(34,197,94,0.15)', strokeWidth: 2, dot: false })
+                )
+              )
+            )
+          )
+    )
+  );
+}
+
+// ─── Feature 4: What-If Sandbox ─────────────────────
+function WhatIfSandbox({ id }) {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [collapsed, setCollapsed] = useState(true);
+  const [pullAdj, setPullAdj] = useState(0);
+  const [fbAdj, setFbAdj] = useState(0);
+
+  useEffect(() => {
+    setLoading(true);
+    api(`/batters/${id}/batted-ball-profile`).then(d => {
+      setProfile(d);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [id]);
+
+  const compute = () => {
+    if (!profile) return null;
+    const currentPull = (profile.pull_rate || 0) * 100;
+    const currentFB = (profile.fb_rate || 0) * 100;
+    const newPull = Math.max(0, Math.min(100, currentPull + pullAdj));
+    const newFB = Math.max(0, Math.min(100, currentFB + fbAdj));
+
+    // Simplified projection: more pull + more FB = more HR potential
+    const outcomes = profile.profile_outcomes || [];
+    const fbOutcome = outcomes.find(o => (o.type || '').toLowerCase().includes('fly'));
+    const baseHRRate = fbOutcome ? (fbOutcome.hr_rate || 0) : 0.03;
+    const baseXwoba = fbOutcome ? (fbOutcome.xwoba || 0.350) : 0.350;
+
+    // Each 1% pull increase adds ~0.3% HR rate, each 1% FB increase adds ~0.2%
+    const hrAdj = (pullAdj * 0.003) + (fbAdj * 0.002);
+    const projHR = Math.max(0, baseHRRate + hrAdj);
+    // xSLG approximation
+    const baseXSLG = (baseXwoba * 1.2) || 0.420;
+    const xslgAdj = (pullAdj * 0.004) + (fbAdj * 0.003);
+    const projXSLG = Math.max(0, Math.min(1.0, baseXSLG + xslgAdj));
+
+    return { currentPull, currentFB, newPull, newFB, projHR: projHR * 100, projXSLG };
+  };
+
+  const result = compute();
+
+  return h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+    h('div', { className: 'flex items-center justify-between cursor-pointer', onClick: () => setCollapsed(!collapsed) },
+      h('div', { className: 'flex items-center gap-2' },
+        h('span', { className: 'text-[13px] font-semibold text-text' }, 'What-If Sandbox'),
+        h('span', { className: 'text-[10px] px-1.5 py-0.5 rounded bg-orange-dim text-orange font-medium' }, 'Illustrative')
+      ),
+      h('span', { className: 'text-text-faint text-[14px]' }, collapsed ? '▶' : '▼')
+    ),
+    !collapsed && (loading || !profile
+      ? h('div', { className: 'mt-3' }, h(Skeleton, { w: '100%', hh: 80 }))
+      : h('div', { className: 'mt-3 space-y-3' },
+          // Pull Rate slider
+          h('div', null,
+            h('div', { className: 'flex items-center justify-between text-[12px] mb-1' },
+              h('span', { className: 'text-text-muted' }, 'Pull Rate Adjustment'),
+              h('span', { className: 'text-text font-medium tabular-nums' },
+                (pullAdj >= 0 ? '+' : '') + pullAdj + '%',
+                result && h('span', { className: 'text-text-faint ml-1' }, `(${result.currentPull.toFixed(1)}% \u2192 ${result.newPull.toFixed(1)}%)`)
+              )
+            ),
+            h('input', {
+              type: 'range', min: -10, max: 10, step: 1, value: pullAdj,
+              onChange: e => setPullAdj(Number(e.target.value)),
+              className: 'w-full'
+            })
+          ),
+          // FB Rate slider
+          h('div', null,
+            h('div', { className: 'flex items-center justify-between text-[12px] mb-1' },
+              h('span', { className: 'text-text-muted' }, 'Fly Ball Rate Adjustment'),
+              h('span', { className: 'text-text font-medium tabular-nums' },
+                (fbAdj >= 0 ? '+' : '') + fbAdj + '%',
+                result && h('span', { className: 'text-text-faint ml-1' }, `(${result.currentFB.toFixed(1)}% \u2192 ${result.newFB.toFixed(1)}%)`)
+              )
+            ),
+            h('input', {
+              type: 'range', min: -10, max: 10, step: 1, value: fbAdj,
+              onChange: e => setFbAdj(Number(e.target.value)),
+              className: 'w-full'
+            })
+          ),
+          // Result card
+          (pullAdj !== 0 || fbAdj !== 0) && result && h('div', { className: 'bg-surface-2 rounded-lg border border-border-accent p-3' },
+            h('div', { className: 'text-[12px] text-text-muted mb-1' },
+              `If pull% goes from ${result.currentPull.toFixed(1)}% \u2192 ${result.newPull.toFixed(1)}% and FB% goes from ${result.currentFB.toFixed(1)}% \u2192 ${result.newFB.toFixed(1)}%:`
+            ),
+            h('div', { className: 'flex gap-4 mt-1' },
+              h('div', { className: 'text-center' },
+                h('div', { className: 'text-[10px] text-text-faint' }, 'Projected HR Rate'),
+                h('div', { className: 'text-[16px] font-bold text-orange tabular-nums' }, result.projHR.toFixed(1) + '%')
+              ),
+              h('div', { className: 'text-center' },
+                h('div', { className: 'text-[10px] text-text-faint' }, 'Projected xSLG'),
+                h('div', { className: 'text-[16px] font-bold text-blue tabular-nums' }, result.projXSLG.toFixed(3).replace(/^0/, ''))
+              )
+            )
+          ),
+          h('div', { className: 'text-[10px] text-text-faint italic mt-1' }, 'What-If (Illustrative) — simplified model for exploration only.')
+        )
+    )
+  );
+}
+
+// ─── Contact Quality Tab ────────────────────────────
+function ContactTab({ id }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [stand, setStand] = useState('');
+  const [homeAway, setHomeAway] = useState('');
+  const [brushRange, setBrushRange] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    const qs = new URLSearchParams({
+      ...(stand && { stand }),
+      ...(homeAway && { home_away: homeAway })
+    });
+    api(`/batters/${id}/visuals?${qs}`).then(d => { setData(d); setLoading(false); setBrushRange(null); }).catch(() => setLoading(false));
+  }, [id, stand, homeAway]);
+
+  if (loading) return h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-4' }, h(ChartSkeleton), h(ChartSkeleton), h(ChartSkeleton), h(ChartSkeleton));
+  if (!data) return h('div', { className: 'text-text-muted text-sm' }, 'No data available.');
+
+  // Build 2 mph bins for EV histogram from raw scatter data
+  const evRaw = data.ev_distribution || [];
+  const evBins = [];
+  for (let ev = 50; ev <= 118; ev += 2) {
+    const matchedBins = evRaw.filter(d => d.bin_start >= ev && d.bin_start < ev + 2);
+    const count = matchedBins.reduce((s, d) => s + (d.count || 0), 0);
+    if (count > 0) evBins.push({ bin_start: ev, count });
+  }
+  const evDistData = evBins.length > 0 ? evBins : evRaw;
+
+  // Scatter data
+  const allScatter = (data.ev_la_scatter || []).map(d => ({
+    ...d,
+    fill: d.barrel ? '#f97316' : (d.event === 'home_run' ? '#f97316' : ['double','triple'].includes(d.event) ? '#22c55e' : d.event === 'single' ? '#3b82f6' : '#4b5563'),
+    r: d.barrel ? 6 : 3
+  }));
+
+  // Build brush data from scatter EVs for the Brush component
+  const evValues = allScatter.map(d => d.ev).filter(v => v != null).sort((a,b) => a - b);
+  const evMin = evValues.length > 0 ? Math.floor(evValues[0]) : 50;
+  const evMax = evValues.length > 0 ? Math.ceil(evValues[evValues.length - 1]) : 120;
+  const brushData = [];
+  for (let ev = evMin; ev <= evMax; ev++) {
+    brushData.push({ ev, count: evValues.filter(v => Math.round(v) === ev).length });
+  }
+
+  // Filter scatter by brush
+  let filteredScatter = allScatter;
+  if (brushRange && brushData.length > 0) {
+    const lo = brushData[brushRange.startIndex]?.ev ?? evMin;
+    const hi = brushData[brushRange.endIndex]?.ev ?? evMax;
+    filteredScatter = allScatter.filter(d => d.ev >= lo && d.ev <= hi);
+  }
+
+  return h('div', { className: 'space-y-4' },
+    // Feature 3: Rolling Form
+    h(RollingFormSection, { id }),
+    // Feature 4: What-If Sandbox
+    h(WhatIfSandbox, { id }),
+    // Filters
+    h('div', { className: 'flex gap-2 flex-wrap' },
+      h('div', { className: 'flex items-center gap-1' },
+        h('span', { className: 'text-[11px] text-text-faint' }, 'vs:'),
+        ...['', 'L', 'R'].map(v => h('button', {
+          key: v || 'all',
+          className: `px-2 py-0.5 text-[11px] rounded transition-colors ${stand === v ? 'bg-blue text-white' : 'bg-surface-2 text-text-muted border border-border hover:text-text'}`,
+          onClick: () => setStand(v)
+        }, v || 'All'))
+      ),
+      h('div', { className: 'flex items-center gap-1' },
+        h('span', { className: 'text-[11px] text-text-faint' }, 'Split:'),
+        ...['', 'Home', 'Away'].map(v => h('button', {
+          key: v || 'all',
+          className: `px-2 py-0.5 text-[11px] rounded transition-colors ${homeAway === v ? 'bg-blue text-white' : 'bg-surface-2 text-text-muted border border-border hover:text-text'}`,
+          onClick: () => setHomeAway(v)
+        }, v || 'All'))
+      )
+    ),
+
+    h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-4' },
+      // EV histogram (2 mph bins)
+      h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+        h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'Exit Velocity Distribution'),
+        h(ResponsiveContainer, { width: '100%', height: 200 },
+          h(BarChart, { data: evDistData, margin: { top: 5, right: 5, bottom: 5, left: 5 } },
+            h(CartesianGrid, { strokeDasharray: '3 3', vertical: false }),
+            h(XAxis, { dataKey: 'bin_start', tick: { fontSize: 10, fill: '#6b7280' }, tickFormatter: v => v + ' mph' }),
+            h(YAxis, { tick: { fontSize: 10, fill: '#6b7280' }, width: 35 }),
+            h(Tooltip, { contentStyle: ttStyle }),
+            h(Bar, { dataKey: 'count', fill: '#f97316', radius: [2,2,0,0], maxBarSize: 24 })
+          )
+        )
+      ),
+
+      // LA histogram
+      h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+        h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'Launch Angle Distribution'),
+        h(ResponsiveContainer, { width: '100%', height: 200 },
+          h(BarChart, { data: data.la_distribution || [], margin: { top: 5, right: 5, bottom: 5, left: 5 } },
+            h(CartesianGrid, { strokeDasharray: '3 3', vertical: false }),
+            h(XAxis, { dataKey: 'bin_start', tick: { fontSize: 10, fill: '#6b7280' }, tickFormatter: v => v + '°' }),
+            h(YAxis, { tick: { fontSize: 10, fill: '#6b7280' }, width: 35 }),
+            h(Tooltip, { contentStyle: ttStyle }),
+            h(Bar, { dataKey: 'count', fill: '#3b82f6', radius: [2,2,0,0], maxBarSize: 24 })
+          )
+        )
+      ),
+
+      // EV vs LA scatter with Brush
+      h('div', { className: 'bg-surface rounded-lg border border-border p-4 lg:col-span-2' },
+        h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-1' }, 'Exit Velocity vs Launch Angle'),
+        h('div', { className: 'flex items-center justify-between mb-2' },
+          h('div', { className: 'flex gap-3 text-[10px]' },
+            h('span', { className: 'flex items-center gap-1' }, h('span', { className: 'w-2 h-2 rounded-full bg-orange inline-block' }), 'HR/Barrel'),
+            h('span', { className: 'flex items-center gap-1' }, h('span', { className: 'w-2 h-2 rounded-full bg-green inline-block' }), '2B/3B'),
+            h('span', { className: 'flex items-center gap-1' }, h('span', { className: 'w-2 h-2 rounded-full bg-blue inline-block' }), '1B'),
+            h('span', { className: 'flex items-center gap-1' }, h('span', { className: 'w-2 h-2 rounded-full bg-[#4b5563] inline-block' }), 'Out')
+          ),
+          h('span', { className: 'text-[11px] text-text-faint tabular-nums' },
+            `Showing ${filteredScatter.length} of ${allScatter.length} batted balls`
+          )
+        ),
+        h(ResponsiveContainer, { width: '100%', height: 280 },
+          h(ScatterChart, { margin: { top: 5, right: 15, bottom: 5, left: 5 } },
+            h(CartesianGrid, { strokeDasharray: '3 3' }),
+            h(XAxis, { dataKey: 'ev', name: 'Exit Velo', type: 'number', tick: { fontSize: 10, fill: '#6b7280' }, domain: ['dataMin - 2', 'dataMax + 2'], label: { value: 'Exit Velo (mph)', position: 'bottom', offset: -2, style: { fontSize: 10, fill: '#6b7280' } } }),
+            h(YAxis, { dataKey: 'la', name: 'Launch Angle', type: 'number', tick: { fontSize: 10, fill: '#6b7280' }, width: 35, domain: ['dataMin - 5', 'dataMax + 5'], label: { value: 'LA (°)', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: '#6b7280' } } }),
+            h(Tooltip, {
+              contentStyle: ttStyle,
+              formatter: (val, name) => [val, name]
+            }),
+            h(Scatter, { data: filteredScatter, isAnimationActive: false },
+              filteredScatter.map((entry, i) => h(Cell, { key: i, fill: entry.fill, r: entry.r }))
+            )
+          )
+        ),
+        // Brush for EV range
+        brushData.length > 0 && h('div', { className: 'mt-2' },
+          h('div', { className: 'text-[11px] text-text-faint mb-1' }, 'Drag to filter by Exit Velocity range:'),
+          h(ResponsiveContainer, { width: '100%', height: 50 },
+            h(BarChart, { data: brushData, margin: { top: 0, right: 15, bottom: 0, left: 5 } },
+              h(Bar, { dataKey: 'count', fill: 'rgba(249,115,22,0.3)', isAnimationActive: false }),
+              h(Brush, {
+                dataKey: 'ev',
+                height: 28,
+                stroke: '#3b82f6',
+                fill: '#111827',
+                travellerWidth: 8,
+                onChange: (range) => setBrushRange(range)
+              })
+            )
+          )
+        )
+      )
+    )
+  );
+}
+
+// ─── Count & Pitch Tab ──────────────────────────────
+function CountsTab({ id }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [heatMetric, setHeatMetric] = useState('xwoba');
+
+  useEffect(() => {
+    setLoading(true);
+    api(`/batters/${id}/visuals`).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, [id]);
+
+  if (loading) return h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-4' }, h(ChartSkeleton), h(ChartSkeleton));
+  if (!data) return h('div', { className: 'text-text-muted text-sm' }, 'No data available.');
+
+  const evByCount = Object.entries(data.ev_by_count || {}).map(([k, v]) => ({ count: k, ev: v })).sort((a,b) => a.count.localeCompare(b.count));
+  const evByPitch = Object.entries(data.ev_by_pitch_type || {}).map(([k, v]) => ({ pitch: k, ev: v })).sort((a,b) => b.ev - a.ev);
+  const outcomeRates = Object.entries(data.outcome_rates_by_count || {}).map(([k, v]) => ({ count: k, ...v })).sort((a,b) => a.count.localeCompare(b.count));
+
+  // Feature 6: count_map data (enhanced heatmap)
+  const countMapRaw = data.count_map || [];
+  const pitchtypeStats = data.pitchtype_stats || [];
+
+  // Build count heatmap grid - prefer count_map if available, fallback to outcome_rates
+  // Columns: balls 0-3, Rows: strikes 0-2
+  const countGrid = [];
+  for (let strikes = 0; strikes <= 2; strikes++) {
+    const row = [];
+    for (let balls = 0; balls <= 3; balls++) {
+      const key = `${balls}-${strikes}`;
+      // Try count_map first
+      const cm = countMapRaw.find(r => r.balls === balls && r.strikes === strikes);
+      const found = outcomeRates.find(r => r.count === key);
+      row.push({
+        count: key,
+        balls,
+        strikes,
+        xwoba: cm?.xwoba ?? found?.xwoba ?? null,
+        ba: cm?.ba ?? found?.ba ?? null,
+        pa: cm?.pa ?? found?.pa ?? null
+      });
+    }
+    countGrid.push(row);
+  }
+
+  // Color scale for heatmap: red(.200) → yellow(.350) → green(.500)
+  function heatColor(val) {
+    if (val == null) return 'rgba(255,255,255,0.05)';
+    const lo = 0.200, mid = 0.350, hi = 0.500;
+    const clamped = Math.max(lo, Math.min(hi, val));
+    let r, g, b;
+    if (clamped <= mid) {
+      const t = (clamped - lo) / (mid - lo);
+      r = 220; g = Math.round(60 + t * 180); b = Math.round(60 + t * 20);
+    } else {
+      const t = (clamped - mid) / (hi - mid);
+      r = Math.round(220 - t * 180); g = Math.round(240 - t * 40); b = Math.round(80 + t * 30);
+    }
+    return `rgba(${r}, ${g}, ${b}, 0.55)`;
+  }
+
+  return h('div', { className: 'space-y-4' },
+    // Count Heatmap
+    h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+      h('div', { className: 'flex items-center justify-between mb-3' },
+        h('h3', { className: 'text-[13px] font-semibold text-text-muted' }, 'Performance by Count'),
+        h('select', {
+          className: 'bg-surface-2 border border-border rounded-md px-2 py-1 text-[12px] text-text outline-none',
+          value: heatMetric,
+          onChange: e => setHeatMetric(e.target.value)
+        },
+          h('option', { value: 'xwoba' }, 'xwOBA'),
+          h('option', { value: 'ba' }, 'BA')
+        )
+      ),
+      h('div', { className: 'max-w-md mx-auto' },
+        // Column headers
+        h('div', { className: 'grid grid-cols-5 gap-1 mb-1' },
+          h('div', { className: 'text-[10px] text-text-faint text-center' }, ''),
+          ...[0,1,2,3].map(b => h('div', { key: b, className: 'text-[10px] text-text-faint text-center font-medium' }, `${b} Ball${b !== 1 ? 's' : ''}`))
+        ),
+        // Rows
+        ...countGrid.map((row, si) =>
+          h('div', { key: si, className: 'grid grid-cols-5 gap-1 mb-1' },
+            h('div', { className: 'text-[10px] text-text-faint flex items-center justify-center font-medium' }, `${si} Strike${si !== 1 ? 's' : ''}`),
+            ...row.map(cell => {
+              const displayVal = heatMetric === 'xwoba' ? cell.xwoba : cell.ba;
+              const secondaryVal = heatMetric === 'xwoba' ? cell.ba : cell.xwoba;
+              const secondaryLabel = heatMetric === 'xwoba' ? 'BA' : 'xwOBA';
+              return h('div', {
+                key: cell.count,
+                className: 'rounded-lg p-2 text-center cursor-default transition-all hover:ring-1 hover:ring-blue/40',
+                style: { background: heatColor(displayVal) }
+              },
+                h('div', { className: 'text-[12px] font-bold text-text tabular-nums' }, cell.count),
+                h('div', { className: 'text-[13px] font-bold text-text tabular-nums mt-0.5' },
+                  displayVal != null ? displayVal.toFixed(3).replace(/^0/,'') : '—'
+                ),
+                secondaryVal != null && h('div', { className: 'text-[10px] text-text-muted tabular-nums' },
+                  secondaryLabel + ': ' + secondaryVal.toFixed(3).replace(/^0/,'')
+                ),
+                cell.pa != null && h('div', { className: 'text-[9px] text-text-faint tabular-nums mt-0.5' }, cell.pa + ' PA')
+              );
+            })
+          )
+        ),
+        // Legend
+        h('div', { className: 'flex items-center justify-center gap-1 mt-2 text-[10px] text-text-faint' },
+          h('span', null, 'Low'),
+          h('div', { className: 'flex gap-0.5' },
+            ...[0.200, 0.275, 0.350, 0.425, 0.500].map(v =>
+              h('div', { key: v, className: 'w-5 h-3 rounded-sm', style: { background: heatColor(v) } })
+            )
+          ),
+          h('span', null, 'High')
+        )
+      )
+    ),
+
+    h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-4' },
+      // EV by Count
+      h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+        h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'Avg EV by Count'),
+        h(ResponsiveContainer, { width: '100%', height: 220 },
+          h(BarChart, { data: evByCount, margin: { top: 5, right: 5, bottom: 5, left: 5 } },
+            h(CartesianGrid, { strokeDasharray: '3 3', vertical: false }),
+            h(XAxis, { dataKey: 'count', tick: { fontSize: 10, fill: '#6b7280' } }),
+            h(YAxis, { domain: ['dataMin - 2', 'dataMax + 2'], tick: { fontSize: 10, fill: '#6b7280' }, width: 35 }),
+            h(Tooltip, { contentStyle: ttStyle }),
+            h(Bar, { dataKey: 'ev', fill: '#f97316', radius: [2,2,0,0], maxBarSize: 30 })
+          )
+        )
+      ),
+      // EV by Pitch Type
+      h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+        h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'Avg EV by Pitch Type'),
+        h(ResponsiveContainer, { width: '100%', height: 220 },
+          h(BarChart, { data: evByPitch, layout: 'vertical', margin: { top: 5, right: 15, bottom: 5, left: 60 } },
+            h(CartesianGrid, { strokeDasharray: '3 3', horizontal: false }),
+            h(XAxis, { type: 'number', domain: ['dataMin - 2', 'dataMax + 2'], tick: { fontSize: 10, fill: '#6b7280' } }),
+            h(YAxis, { type: 'category', dataKey: 'pitch', tick: { fontSize: 10, fill: '#9ca3af' }, width: 55 }),
+            h(Tooltip, { contentStyle: ttStyle }),
+            h(Bar, { dataKey: 'ev', fill: '#3b82f6', radius: [0,2,2,0], maxBarSize: 20 })
+          )
+        )
+      )
+    ),
+
+    // Outcome rates table
+    outcomeRates.length > 0 && h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+      h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'Outcome Rates by Count'),
+      h('div', { className: 'overflow-x-auto' },
+        h('table', { className: 'data-table w-full text-[12px]' },
+          h('thead', null,
+            h('tr', { className: 'border-b border-border' },
+              ...['Count', 'PA', 'BA', 'K%', 'BB%', 'xwOBA'].map(c =>
+                h('th', { key: c, className: 'px-3 py-2.5 text-right font-semibold text-text-muted' }, c)
+              )
+            )
+          ),
+          h('tbody', null,
+            ...outcomeRates.map(r => h('tr', { key: r.count, className: 'border-b border-border/50' },
+              h('td', { className: 'px-3 py-1.5 text-right font-medium text-text tabular-nums' }, r.count),
+              h('td', { className: 'px-3 py-1.5 text-right text-text-muted tabular-nums' }, r.pa || '—'),
+              h('td', { className: 'px-3 py-1.5 text-right tabular-nums' }, r.ba != null ? r.ba.toFixed(3).replace(/^0/,'') : '—'),
+              h('td', { className: 'px-3 py-1.5 text-right tabular-nums' }, r.k_rate != null ? (r.k_rate * 100).toFixed(1) + '%' : '—'),
+              h('td', { className: 'px-3 py-1.5 text-right tabular-nums' }, r.bb_rate != null ? (r.bb_rate * 100).toFixed(1) + '%' : '—'),
+              h('td', { className: 'px-3 py-1.5 text-right tabular-nums font-medium text-blue' }, r.xwoba != null ? r.xwoba.toFixed(3).replace(/^0/,'') : '—')
+            ))
+          )
+        )
+      )
+    ),
+
+    // Feature 6: Pitch Type Stats chart
+    pitchtypeStats.length > 0 && h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+      h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'Performance by Pitch Type'),
+      h(ResponsiveContainer, { width: '100%', height: 260 },
+        h(BarChart, { data: pitchtypeStats, margin: { top: 5, right: 15, bottom: 5, left: 5 } },
+          h(CartesianGrid, { strokeDasharray: '3 3', vertical: false }),
+          h(XAxis, { dataKey: 'category', tick: { fontSize: 10, fill: '#9ca3af' } }),
+          h(YAxis, { yAxisId: 'ev', orientation: 'left', tick: { fontSize: 10, fill: '#6b7280' }, width: 35, domain: ['dataMin - 3', 'dataMax + 3'] }),
+          h(YAxis, { yAxisId: 'xw', orientation: 'right', tick: { fontSize: 10, fill: '#6b7280' }, width: 45, domain: [0, 'dataMax + 0.05'] }),
+          h(Tooltip, { contentStyle: ttStyle }),
+          h(Legend, { wrapperStyle: { fontSize: 11 } }),
+          h(Bar, { yAxisId: 'ev', dataKey: 'avg_ev', fill: '#f97316', name: 'Avg EV', radius: [2,2,0,0], maxBarSize: 28 }),
+          h(Bar, { yAxisId: 'xw', dataKey: 'xwoba', fill: '#3b82f6', name: 'xwOBA', radius: [2,2,0,0], maxBarSize: 28 })
+        )
+      ),
+      h('div', { className: 'flex items-center justify-center gap-4 mt-2 text-[10px] text-text-faint' },
+        h('span', null, 'Count: ', pitchtypeStats.map(p => `${p.category}: ${p.count || 0}`).join(', '))
+      )
+    )
+  );
+}
+
+// ─── Spray & Heatmaps Tab ───────────────────────────
+function SprayTab({ id }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [sprayFilter, setSprayFilter] = useState('All');
+
+  useEffect(() => {
+    setLoading(true);
+    api(`/batters/${id}/visuals`).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, [id]);
+
+  if (loading) return h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-4' }, h(ChartSkeleton), h(ChartSkeleton));
+  if (!data) return h('div', { className: 'text-text-muted text-sm' }, 'No data available.');
+
+  const sprayFilters = ['All', 'Hits', 'HR', 'Hard Hit (95+)'];
+
+  // Filter spray data
+  const rawSpray = data.spray_chart || [];
+  const filteredSpray = rawSpray.filter(d => {
+    if (sprayFilter === 'All') return true;
+    if (sprayFilter === 'Hits') return ['single','double','triple','home_run'].includes(d.event);
+    if (sprayFilter === 'HR') return d.event === 'home_run';
+    if (sprayFilter === 'Hard Hit (95+)') return (d.ev || 0) >= 95;
+    return true;
+  });
+
+  return h('div', { className: 'space-y-4' },
+    h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-4' },
+      // Spray chart
+      h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+        h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-2' }, 'Spray Chart'),
+        // Toggle buttons
+        h('div', { className: 'flex flex-wrap gap-1 mb-3' },
+          ...sprayFilters.map(f => h('button', {
+            key: f,
+            className: `pill-btn px-2.5 py-1 text-[11px] rounded-full font-medium ${sprayFilter === f ? 'bg-blue text-white' : 'bg-surface-2 text-text-muted border border-border'}`,
+            onClick: () => setSprayFilter(f)
+          }, f))
+        ),
+        h('div', { className: 'text-[10px] text-text-faint mb-1' }, `${filteredSpray.length} batted balls`),
+        h(EnhancedSprayChartSVG, { data: filteredSpray })
+      ),
+      // Heatmap
+      h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+        h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'Contact Heatmap'),
+        h(GridHeatmap, { data: data.contact_heatmap || [] })
+      )
+    )
+  );
+}
+
+function EnhancedSprayChartSVG({ data }) {
+  const w = 320, hh = 300;
+  const cx = 160, cy = 275;
+  const maxR = 240;
+  const infieldR = 100;
+  const outfieldR = 230;
+
+  // Map spray data to SVG coords with outcome-based coloring
+  const points = data.map(d => {
+    const px = cx + (d.x || 0) * 0.85;
+    const py = cy + (d.y || 0) * 0.85;
+    const ev = d.ev || 80;
+    // Radius proportional to EV
+    const minR = 1.5, maxDotR = 5.5;
+    const t = Math.min(1, Math.max(0, (ev - 60) / 50));
+    const dotR = minR + t * (maxDotR - minR);
+    // Color by outcome
+    let fill;
+    if (d.event === 'home_run') fill = '#f97316';
+    else if (['single','double','triple'].includes(d.event)) fill = '#22c55e';
+    else fill = '#6b7280';
+    return { px, py, ev, event: d.event, fill, dotR };
+  });
+
+  const sin45 = Math.sin(Math.PI/4);
+  const cos45 = Math.cos(Math.PI/4);
+
+  return h('svg', { viewBox: `0 0 ${w} ${hh}`, className: 'w-full max-w-[320px] mx-auto' },
+    h('defs', null,
+      h('radialGradient', { id: 'grassGrad', cx: '50%', cy: '90%', r: '80%' },
+        h('stop', { offset: '0%', stopColor: '#1a3a1a', stopOpacity: 0.4 }),
+        h('stop', { offset: '60%', stopColor: '#0f2a0f', stopOpacity: 0.3 }),
+        h('stop', { offset: '100%', stopColor: '#0a0e17', stopOpacity: 0.1 })
+      ),
+      h('radialGradient', { id: 'dirtGrad', cx: '50%', cy: '100%', r: '50%' },
+        h('stop', { offset: '0%', stopColor: '#3d2b1f', stopOpacity: 0.25 }),
+        h('stop', { offset: '100%', stopColor: '#1a1510', stopOpacity: 0.1 })
+      )
+    ),
+    // Outfield arc (wall)
+    h('path', {
+      d: `M ${cx - outfieldR * sin45} ${cy - outfieldR * cos45} A ${outfieldR} ${outfieldR} 0 0 1 ${cx + outfieldR * sin45} ${cy - outfieldR * cos45} L ${cx} ${cy} Z`,
+      fill: 'url(#grassGrad)', stroke: 'rgba(255,255,255,0.06)', strokeWidth: 1
+    }),
+    // Outfield wall arc line
+    h('path', {
+      d: `M ${cx - outfieldR * sin45} ${cy - outfieldR * cos45} A ${outfieldR} ${outfieldR} 0 0 1 ${cx + outfieldR * sin45} ${cy - outfieldR * cos45}`,
+      fill: 'none', stroke: 'rgba(255,255,255,0.15)', strokeWidth: 1.5, strokeDasharray: '6 3'
+    }),
+    // Infield dirt area
+    h('path', {
+      d: `M ${cx - infieldR * sin45} ${cy - infieldR * cos45} A ${infieldR} ${infieldR} 0 0 1 ${cx + infieldR * sin45} ${cy - infieldR * cos45} L ${cx} ${cy} Z`,
+      fill: 'url(#dirtGrad)', stroke: 'none'
+    }),
+    // Fair territory lines
+    h('line', { x1: cx, y1: cy, x2: cx - outfieldR * sin45, y2: cy - outfieldR * cos45, stroke: 'rgba(255,255,255,0.12)', strokeWidth: 1 }),
+    h('line', { x1: cx, y1: cy, x2: cx + outfieldR * sin45, y2: cy - outfieldR * cos45, stroke: 'rgba(255,255,255,0.12)', strokeWidth: 1 }),
+    // Infield diamond
+    h('polygon', {
+      points: `${cx},${cy-90} ${cx+45},${cy-45} ${cx},${cy} ${cx-45},${cy-45}`,
+      fill: 'none', stroke: 'rgba(255,255,255,0.15)', strokeWidth: 0.5
+    }),
+    // Base paths
+    h('line', { x1: cx, y1: cy, x2: cx + 45, y2: cy - 45, stroke: 'rgba(255,255,255,0.1)', strokeWidth: 0.5 }),
+    h('line', { x1: cx + 45, y1: cy - 45, x2: cx, y2: cy - 90, stroke: 'rgba(255,255,255,0.1)', strokeWidth: 0.5 }),
+    h('line', { x1: cx, y1: cy - 90, x2: cx - 45, y2: cy - 45, stroke: 'rgba(255,255,255,0.1)', strokeWidth: 0.5 }),
+    h('line', { x1: cx - 45, y1: cy - 45, x2: cx, y2: cy, stroke: 'rgba(255,255,255,0.1)', strokeWidth: 0.5 }),
+    // Batted balls (outs first, then hits, then HRs on top)
+    ...[...points].sort((a, b) => {
+      const order = { '#6b7280': 0, '#22c55e': 1, '#f97316': 2 };
+      return (order[a.fill] || 0) - (order[b.fill] || 0);
+    }).map((p, i) => h('circle', {
+      key: i, cx: p.px, cy: p.py,
+      r: p.dotR,
+      fill: p.fill,
+      opacity: 0.8,
+      stroke: p.fill === '#f97316' ? '#f97316' : 'none',
+      strokeWidth: p.fill === '#f97316' ? 0.5 : 0,
+      strokeOpacity: 0.5
+    })),
+    // Home plate
+    h('polygon', { points: `${cx},${cy+3} ${cx-4},${cy-1} ${cx-2},${cy-4} ${cx+2},${cy-4} ${cx+4},${cy-1}`, fill: '#fff', opacity: 0.7 }),
+    // Legend
+    h('g', { transform: `translate(10, ${hh - 25})` },
+      h('circle', { cx: 0, cy: 0, r: 3, fill: '#f97316' }),
+      h('text', { x: 6, y: 3, fill: '#9ca3af', fontSize: 9 }, 'HR'),
+      h('circle', { cx: 30, cy: 0, r: 3, fill: '#22c55e' }),
+      h('text', { x: 36, y: 3, fill: '#9ca3af', fontSize: 9 }, 'Hit'),
+      h('circle', { cx: 58, cy: 0, r: 3, fill: '#6b7280' }),
+      h('text', { x: 64, y: 3, fill: '#9ca3af', fontSize: 9 }, 'Out')
+    )
+  );
+}
+
+function GridHeatmap({ data }) {
+  if (!data || data.length === 0) return h('div', { className: 'text-text-faint text-[12px] text-center py-8' }, 'No heatmap data available.');
+
+  // Build a 10x10 grid from data
+  const gridSize = 10;
+  const grid = Array.from({ length: gridSize }, () => Array.from({ length: gridSize }, () => 0));
+
+  // Map data points into grid cells
+  // data has x, y (zone coords) and value
+  const xVals = data.map(d => d.x || 0);
+  const yVals = data.map(d => d.y || 0);
+  const xMin = Math.min(...xVals) - 0.5;
+  const xMax = Math.max(...xVals) + 0.5;
+  const yMin = Math.min(...yVals) - 0.5;
+  const yMax = Math.max(...yVals) + 0.5;
+  const xRange = xMax - xMin || 1;
+  const yRange = yMax - yMin || 1;
+
+  data.forEach(d => {
+    const col = Math.min(gridSize - 1, Math.max(0, Math.floor(((d.x || 0) - xMin) / xRange * gridSize)));
+    const row = Math.min(gridSize - 1, Math.max(0, Math.floor(((d.y || 0) - yMin) / yRange * gridSize)));
+    grid[row][col] += (d.value || 1);
+  });
+
+  const maxVal = Math.max(...grid.flat(), 1);
+
+  function cellColor(val) {
+    if (val === 0) return 'rgba(255,255,255,0.02)';
+    const t = val / maxVal;
+    const r = Math.round(59 + t * 180);
+    const g = Math.round(130 - t * 60);
+    const b = Math.round(246 - t * 200);
+    return `rgba(${r}, ${g}, ${b}, ${Math.max(0.1, t * 0.75)})`;
+  }
+
+  return h('div', { className: 'max-w-[300px] mx-auto' },
+    h('div', {
+      className: 'grid gap-[2px]',
+      style: { gridTemplateColumns: `repeat(${gridSize}, 1fr)` }
+    },
+      ...grid.flatMap((row, ri) =>
+        row.map((val, ci) =>
+          h('div', {
+            key: `${ri}-${ci}`,
+            className: 'heatmap-cell aspect-square rounded-sm relative transition-all hover:ring-1 hover:ring-white/20',
+            style: { background: cellColor(val) }
+          },
+            h('div', { className: 'hm-tip' }, `Count: ${val}`)
+          )
+        )
+      )
+    ),
+    // Strike zone outline hint
+    h('div', { className: 'text-[10px] text-text-faint text-center mt-2' }, 'Contact density across zones')
+  );
+}
+
+// ─── Props Tab (Hitter Detail) ──────────────────────
+function PropsTab({ id }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    api(`/batters/${id}/props`).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, [id]);
+
+  if (loading) return h(TableSkeleton, { rows: 5 });
+  if (!data) return h('div', { className: 'text-text-muted text-sm' }, 'No data available.');
+
+  const props = data.props || [];
+  const projections = data.projections || [];
+  const proj = projections[0] || {};
+
+  // Group props by market
+  const marketGroups = {};
+  props.forEach(p => {
+    const mkt = p.market || 'Unknown';
+    if (!marketGroups[mkt]) marketGroups[mkt] = [];
+    marketGroups[mkt].push(p);
+  });
+
+  // Build comparison chart data: projected vs line for each market
+  const compData = [];
+  const marketProjMap = {
+    'Hits': 'expected_hits', 'hits': 'expected_hits',
+    'Total Bases': 'expected_total_bases', 'total_bases': 'expected_total_bases',
+    'Home Runs': 'hr_prob', 'home_runs': 'hr_prob',
+    'Strikeouts': 'k_prob', 'strikeouts': 'k_prob',
+    'RBIs': 'expected_rbis', 'rbis': 'expected_rbis'
+  };
+
+  Object.entries(marketGroups).forEach(([mkt, items]) => {
+    const firstItem = items[0];
+    const projKey = marketProjMap[mkt];
+    const projVal = proj && projKey ? proj[projKey] : null;
+    const line = firstItem.line;
+    if (line != null) {
+      compData.push({
+        market: mkt.replace(/_/g, ' '),
+        Projected: projVal != null ? Number(projVal.toFixed(2)) : null,
+        Line: typeof line === 'number' ? line : parseFloat(line)
+      });
+    }
+  });
+
+  return h('div', { className: 'space-y-4' },
+    // Props cards grouped by market
+    h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+      h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'Player Props'),
+      props.length === 0
+        ? h('div', { className: 'text-text-faint text-[12px] text-center py-4' }, 'No props available.')
+        : h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3' },
+            ...Object.entries(marketGroups).map(([mkt, items]) => {
+              const p = items[0];
+              const projKey = marketProjMap[mkt];
+              const projVal = proj && projKey ? proj[projKey] : null;
+              const edge = projVal != null && p.line != null ? projVal - p.line : null;
+
+              return h('div', {
+                key: mkt,
+                className: 'bg-surface-2 rounded-lg border border-border p-3 card-hover'
+              },
+                h('div', { className: 'flex items-center justify-between mb-2' },
+                  h('span', { className: 'text-[13px] font-semibold text-text capitalize' }, mkt.replace(/_/g, ' ')),
+                  h(EdgeChip, { edge })
+                ),
+                h('div', { className: 'flex items-center gap-4 text-[12px] tabular-nums' },
+                  h('div', null,
+                    h('span', { className: 'text-text-faint' }, 'Line: '),
+                    h('span', { className: 'text-text font-semibold' }, p.line)
+                  ),
+                  h('div', null,
+                    h('span', { className: 'text-text-faint' }, 'O: '),
+                    h('span', { className: 'text-green font-medium' }, p.odds_over)
+                  ),
+                  h('div', null,
+                    h('span', { className: 'text-text-faint' }, 'U: '),
+                    h('span', { className: 'text-red font-medium' }, p.odds_under)
+                  )
+                ),
+                items.length > 0 && h('div', { className: 'text-[10px] text-text-faint mt-1.5' }, p.sportsbook || ''),
+                // Show additional books if multiple
+                items.length > 1 && h('div', { className: 'mt-1 pt-1 border-t border-border/50' },
+                  ...items.slice(1).map((ip, ii) =>
+                    h('div', { key: ii, className: 'flex items-center gap-3 text-[11px] tabular-nums text-text-muted mt-0.5' },
+                      h('span', null, ip.sportsbook || ''),
+                      h('span', null, `Line: ${ip.line}`),
+                      h('span', { className: 'text-green' }, `O: ${ip.odds_over}`),
+                      h('span', { className: 'text-red' }, `U: ${ip.odds_under}`)
+                    )
+                  )
+                )
+              );
+            })
+          )
+    ),
+
+    // Projected vs Line bar chart
+    compData.length > 0 && h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+      h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'Projected vs Line'),
+      h('div', { className: 'flex gap-3 mb-2 text-[10px]' },
+        h('span', { className: 'flex items-center gap-1' }, h('span', { className: 'w-2 h-2 rounded-sm bg-blue inline-block' }), 'Projected'),
+        h('span', { className: 'flex items-center gap-1' }, h('span', { className: 'w-2 h-2 rounded-sm bg-text-faint inline-block' }), 'Line')
+      ),
+      h(ResponsiveContainer, { width: '100%', height: 220 },
+        h(BarChart, { data: compData, margin: { top: 5, right: 15, bottom: 5, left: 5 } },
+          h(CartesianGrid, { strokeDasharray: '3 3', vertical: false }),
+          h(XAxis, { dataKey: 'market', tick: { fontSize: 10, fill: '#9ca3af' } }),
+          h(YAxis, { tick: { fontSize: 10, fill: '#6b7280' }, width: 35 }),
+          h(Tooltip, { contentStyle: ttStyle }),
+          h(Bar, { dataKey: 'Projected', fill: '#3b82f6', radius: [2,2,0,0], maxBarSize: 28 }),
+          h(Bar, { dataKey: 'Line', fill: '#6b7280', radius: [2,2,0,0], maxBarSize: 28 })
+        )
+      )
+    ),
+
+    // Projections card
+    h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+      h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'Model Projections'),
+      proj && Object.keys(proj).length > 0
+        ? h('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-3' },
+            h(MiniStat, { label: 'Exp. Hits', value: proj.expected_hits != null ? proj.expected_hits.toFixed(2) : '—' }),
+            h(MiniStat, { label: 'Exp. TB', value: proj.expected_total_bases != null ? proj.expected_total_bases.toFixed(2) : '—' }),
+            h(MiniStat, { label: 'HR Prob', value: proj.hr_prob != null ? (proj.hr_prob * 100).toFixed(1) + '%' : '—', color: 'text-orange' }),
+            h(MiniStat, { label: 'K Prob', value: proj.k_prob != null ? (proj.k_prob * 100).toFixed(1) + '%' : '—', color: 'text-red' })
+          )
+        : h('div', { className: 'text-text-faint text-[12px] text-center py-4' }, 'No projections available.')
+    )
+  );
+}
+
+function MiniStat({ label, value, color = 'text-text' }) {
+  return h('div', { className: 'bg-surface-2 rounded-lg p-3 text-center' },
+    h('div', { className: 'text-[10px] text-text-faint uppercase tracking-wider mb-1' }, label),
+    h('div', { className: `text-[16px] font-bold tabular-nums ${color}` }, value)
+  );
+}
+
+// ─── Feature 1: Compare Page ──────────────────────
+function ComparePage({ compareIds }) {
+  const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!compareIds || compareIds.length < 2) { setLoading(false); return; }
+    setLoading(true);
+    api(`/batters/compare?ids=${compareIds.join(',')}`)
+      .then(d => { setPlayers(d || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [compareIds]);
+
+  if (!compareIds || compareIds.length < 2) {
+    return h('div', { className: 'text-center py-20 space-y-3 fade-in' },
+      h('div', { className: 'text-[18px] font-bold text-text' }, 'Hitter Comparison'),
+      h('div', { className: 'text-[13px] text-text-muted' }, 'Select 2-3 hitters from the Hitters page to compare them side-by-side.'),
+      h('button', {
+        className: 'px-4 py-2 text-[13px] rounded bg-blue text-white font-medium mt-2',
+        onClick: () => navigate('/hitters')
+      }, 'Go to Hitters')
+    );
+  }
+
+  if (loading) return h('div', { className: 'space-y-4 fade-in' }, h(KPISkeleton), h(ChartSkeleton));
+
+  const percentileStats = ['avg_ev', 'hard_hit_rate', 'barrel_rate', 'xwoba', 'k_rate', 'bb_rate'];
+  const percentileLabels = { avg_ev: 'Avg EV', hard_hit_rate: 'Hard%', barrel_rate: 'Barrel%', xwoba: 'xwOBA', k_rate: 'K%', bb_rate: 'BB%' };
+  const colors = ['#3b82f6', '#f97316', '#22c55e'];
+
+  // For K%, lower is better so we invert the color logic
+  const percentileColor = (stat, pct) => {
+    if (pct == null) return '#4b5563';
+    if (stat === 'k_rate') return pct >= 70 ? '#ef4444' : pct >= 40 ? '#f97316' : '#22c55e';
+    return pct >= 70 ? '#22c55e' : pct >= 40 ? '#f97316' : '#ef4444';
+  };
+
+  return h('div', { className: 'space-y-4 fade-in' },
+    h('h1', { className: 'text-[18px] font-bold text-text' }, 'Hitter Comparison'),
+
+    // Player cards
+    h('div', { className: `grid grid-cols-1 md:grid-cols-${players.length} gap-4` },
+      ...players.map((p, pi) => h('div', {
+        key: p.batter_id,
+        className: 'bg-surface rounded-lg border border-border p-4',
+        style: { borderTopColor: colors[pi], borderTopWidth: 3 }
+      },
+        h('div', { className: 'flex items-center gap-3 mb-3' },
+          h('img', {
+            src: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_80,q_auto:best/v1/people/${p.batter_id}/headshot/67/current`,
+            className: 'w-12 h-12 rounded-full bg-surface-2 object-cover',
+            onError: (e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect fill="%231a1f2e" width="48" height="48" rx="24"/><text x="24" y="30" text-anchor="middle" fill="%236b7280" font-size="16">?</text></svg>'; }
+          }),
+          h('div', null,
+            h('div', { className: 'text-[14px] font-bold text-text' }, p.name),
+            h('div', { className: 'text-[12px] text-text-muted' }, `${p.team} \u00B7 ${p.position}`)
+          )
+        ),
+        // Key metrics
+        h('div', { className: 'grid grid-cols-3 gap-2' },
+          ...Object.entries(p.metrics || {}).slice(0, 6).map(([k, v]) =>
+            h('div', { key: k, className: 'text-center' },
+              h('div', { className: 'text-[9px] text-text-faint uppercase' }, k.replace(/_/g, ' ')),
+              h('div', { className: 'text-[13px] font-semibold text-text tabular-nums' },
+                v != null ? (typeof v === 'number' && v < 1 && v > 0 ? v.toFixed(3).replace(/^0/, '') : (typeof v === 'number' ? v.toFixed(v > 10 ? 1 : 3) : v)) : '\u2014'
+              )
+            )
+          )
+        )
+      ))
+    ),
+
+    // Percentile bars
+    h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+      h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'Percentile Rankings'),
+      h('div', { className: 'space-y-3' },
+        ...percentileStats.map(stat =>
+          h('div', { key: stat, className: 'space-y-1' },
+            h('div', { className: 'text-[11px] text-text-muted font-medium flex items-center gap-1' }, percentileLabels[stat] || stat, h(InfoIcon, { metricKey: percentileLabels[stat] || stat })),
+            ...players.map((p, pi) => {
+              const pct = p.percentiles?.[stat];
+              return h('div', { key: p.batter_id, className: 'flex items-center gap-2' },
+                h('span', { className: 'text-[10px] text-text-faint w-16 truncate' }, p.name?.split(' ').pop()),
+                h('div', { className: 'flex-1 h-4 bg-surface-2 rounded-full overflow-hidden relative' },
+                  h('div', {
+                    className: 'h-full rounded-full transition-all duration-500',
+                    style: { width: `${pct || 0}%`, background: percentileColor(stat, pct) }
+                  }),
+                  h('span', { className: 'absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white tabular-nums' },
+                    pct != null ? Math.round(pct) + 'th' : '\u2014'
+                  )
+                )
+              );
+            })
+          )
+        )
+      )
+    ),
+
+    // Overlaid EV distributions
+    (players.some(p => p.ev_distribution?.length > 0)) && h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+      h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'EV Distribution Overlay'),
+      h('div', { className: 'flex gap-3 mb-2 text-[10px]' },
+        ...players.map((p, pi) => h('span', { key: pi, className: 'flex items-center gap-1' },
+          h('span', { className: 'w-2 h-2 rounded-full inline-block', style: { background: colors[pi] } }),
+          p.name?.split(' ').pop()
+        ))
+      ),
+      h(ResponsiveContainer, { width: '100%', height: 220 },
+        h(AreaChart, { margin: { top: 5, right: 15, bottom: 5, left: 5 }, data: (() => {
+          // Merge all players' EV distributions
+          const allBins = {};
+          players.forEach((p, pi) => {
+            (p.ev_distribution || []).forEach(d => {
+              if (!allBins[d.bin_start]) allBins[d.bin_start] = { bin_start: d.bin_start };
+              allBins[d.bin_start][`p${pi}`] = d.count;
+            });
+          });
+          return Object.values(allBins).sort((a, b) => a.bin_start - b.bin_start);
+        })() },
+          h(CartesianGrid, { strokeDasharray: '3 3', vertical: false }),
+          h(XAxis, { dataKey: 'bin_start', tick: { fontSize: 10, fill: '#6b7280' }, tickFormatter: v => v + ' mph' }),
+          h(YAxis, { tick: { fontSize: 10, fill: '#6b7280' }, width: 35 }),
+          h(Tooltip, { contentStyle: ttStyle }),
+          ...players.map((p, pi) =>
+            h(Area, { key: pi, type: 'monotone', dataKey: `p${pi}`, stroke: colors[pi], fill: colors[pi], fillOpacity: 0.15, strokeWidth: 2, name: p.name?.split(' ').pop(), dot: false })
+          )
+        )
+      )
+    ),
+
+    // Overlaid LA distributions
+    (players.some(p => p.la_distribution?.length > 0)) && h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+      h('h3', { className: 'text-[13px] font-semibold text-text-muted mb-3' }, 'LA Distribution Overlay'),
+      h(ResponsiveContainer, { width: '100%', height: 220 },
+        h(AreaChart, { margin: { top: 5, right: 15, bottom: 5, left: 5 }, data: (() => {
+          const allBins = {};
+          players.forEach((p, pi) => {
+            (p.la_distribution || []).forEach(d => {
+              if (!allBins[d.bin_start]) allBins[d.bin_start] = { bin_start: d.bin_start };
+              allBins[d.bin_start][`p${pi}`] = d.count;
+            });
+          });
+          return Object.values(allBins).sort((a, b) => a.bin_start - b.bin_start);
+        })() },
+          h(CartesianGrid, { strokeDasharray: '3 3', vertical: false }),
+          h(XAxis, { dataKey: 'bin_start', tick: { fontSize: 10, fill: '#6b7280' }, tickFormatter: v => v + '\u00B0' }),
+          h(YAxis, { tick: { fontSize: 10, fill: '#6b7280' }, width: 35 }),
+          h(Tooltip, { contentStyle: ttStyle }),
+          ...players.map((p, pi) =>
+            h(Area, { key: pi, type: 'monotone', dataKey: `p${pi}`, stroke: colors[pi], fill: colors[pi], fillOpacity: 0.15, strokeWidth: 2, name: p.name?.split(' ').pop(), dot: false })
+          )
+        )
+      )
+    )
+  );
+}
+
+// ─── Props Page ─────────────────────────────────────
+function PropsPage() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [market, setMarket] = useState('');
+  const [team, setTeam] = useState('');
+  const [minEdge, setMinEdge] = useState('');
+  const [minEdgeSlider, setMinEdgeSlider] = useState(0);
+  const [teams, setTeams] = useState([]);
+  // Feature 7: Pick Builder state
+  const [picks, setPicks] = useState([]);
+  const [leans, setLeans] = useState({}); // { propIndex: 'over' | 'under' }
+
+  useEffect(() => { api('/teams').then(setTeams).catch(() => {}); }, []);
+
+  // Sync slider and input
+  const handleSliderChange = (val) => {
+    setMinEdgeSlider(val);
+    setMinEdge(val > 0 ? String(val) : '');
+  };
+  const handleInputChange = (val) => {
+    setMinEdge(val);
+    const num = parseFloat(val);
+    if (!isNaN(num) && num >= 0 && num <= 1) setMinEdgeSlider(num);
+    else if (val === '') setMinEdgeSlider(0);
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    const qs = new URLSearchParams({
+      ...(market && { market }),
+      ...(team && { team }),
+      ...(minEdge && { min_edge: minEdge })
+    });
+    api(`/props/today?${qs}`).then(d => { setData(d || []); setLoading(false); }).catch(() => { setData([]); setLoading(false); });
+  }, [market, team, minEdge]);
+
+  const marketPills = [
+    { value: '', label: 'All' },
+    { value: 'Hits', label: 'Hits' },
+    { value: 'Total Bases', label: 'Total Bases' },
+    { value: 'Home Runs', label: 'Home Runs' },
+    { value: 'Strikeouts', label: 'Strikeouts' },
+    { value: 'RBIs', label: 'RBIs' }
+  ];
+
+  // Helper for implied probability from American odds
+  function impliedProb(odds) {
+    if (odds == null) return null;
+    const o = typeof odds === 'string' ? parseInt(odds) : odds;
+    if (isNaN(o)) return null;
+    if (o > 0) return (100 / (o + 100)) * 100;
+    if (o < 0) return (Math.abs(o) / (Math.abs(o) + 100)) * 100;
+    return null;
+  }
+
+  return h('div', { className: 'space-y-4 fade-in' },
+    h('h1', { className: 'text-[18px] font-bold text-text', 'data-tour': 'props-table' }, "Today's Props"),
+
+    // Market pill buttons
+    h('div', { className: 'flex flex-wrap gap-1.5' },
+      ...marketPills.map(mp => h('button', {
+        key: mp.value,
+        className: `pill-btn px-3 py-1.5 text-[12px] rounded-full font-medium ${market === mp.value ? 'bg-blue text-white' : 'bg-surface-2 text-text-muted border border-border'}`,
+        onClick: () => setMarket(mp.value)
+      }, mp.label))
+    ),
+
+    // Other filters
+    h('div', { className: 'flex flex-wrap gap-2 items-center' },
+      h('select', {
+        className: 'bg-surface-2 border border-border rounded-md px-2 py-1.5 text-[13px] text-text outline-none',
+        value: team, onChange: e => setTeam(e.target.value)
+      },
+        h('option', { value: '' }, 'All Teams'),
+        ...teams.map(t => h('option', { key: t, value: t }, t))
+      ),
+      h('div', { className: 'flex items-center gap-2' },
+        h('span', { className: 'text-[11px] text-text-faint' }, 'Min Edge:'),
+        h('input', {
+          type: 'number', step: '0.05', placeholder: '0',
+          className: 'bg-surface-2 border border-border rounded-md px-2 py-1 text-[13px] text-text outline-none w-16 tabular-nums',
+          value: minEdge, onChange: e => handleInputChange(e.target.value)
+        }),
+        h('input', {
+          type: 'range', min: 0, max: 1, step: 0.05,
+          value: minEdgeSlider,
+          onChange: e => handleSliderChange(parseFloat(e.target.value)),
+          className: 'w-24'
+        }),
+        h('span', { className: 'text-[11px] text-text-faint tabular-nums w-8' }, minEdgeSlider.toFixed(2))
+      )
+    ),
+
+    // Table
+    loading ? h(TableSkeleton, { rows: 10 }) :
+    data.length === 0
+      ? h('div', { className: 'bg-surface rounded-lg border border-border p-8 text-center text-text-faint text-[13px]' }, 'No props available for today.')
+      : h('div', { className: 'bg-surface rounded-lg border border-border overflow-x-auto' },
+          h('table', { className: 'data-table w-full text-[12px]' },
+            h('thead', null,
+              h('tr', { className: 'border-b border-border' },
+                ...['', 'Player', 'Team', 'Market', 'Line', 'Over', 'Under', 'Impl. O%', 'Impl. U%', 'Book', 'Projected', 'Edge'].map(c =>
+                  h('th', { key: c || 'add', className: 'px-3 py-2.5 text-right font-semibold text-text-muted' }, c)
+                )
+              )
+            ),
+            h('tbody', null,
+              ...data.map((p, i) => {
+                const implOver = impliedProb(p.odds_over);
+                const implUnder = impliedProb(p.odds_under);
+                return h('tr', {
+                  key: i,
+                  className: 'border-b border-border/50',
+                  onClick: () => navigate(`/hitters/${p.batter_id}`)
+                },
+                  h('td', { className: 'px-2 py-2 text-center', onClick: e => e.stopPropagation() },
+                    picks.find(pk => pk._idx === i)
+                      ? h('button', {
+                          className: 'w-6 h-6 rounded-full bg-red-dim text-red text-[11px] font-bold hover:bg-red/20',
+                          onClick: () => setPicks(picks.filter(pk => pk._idx !== i))
+                        }, '\u2212')
+                      : h('button', {
+                          className: 'w-6 h-6 rounded-full bg-blue-dim text-blue text-[11px] font-bold hover:bg-blue/20 disabled:opacity-30',
+                          disabled: picks.length >= 5,
+                          onClick: () => setPicks([...picks, { ...p, _idx: i }])
+                        }, '+')
+                  ),
+                  h('td', { className: 'px-3 py-2 text-right font-medium text-text' }, p.full_name),
+                  h('td', { className: 'px-3 py-2 text-right text-text-muted' }, p.team),
+                  h('td', { className: 'px-3 py-2 text-right capitalize text-text' }, (p.market || '').replace(/_/g, ' ')),
+                  h('td', { className: 'px-3 py-2 text-right tabular-nums font-medium' }, p.line),
+                  h('td', { className: 'px-3 py-2 text-right tabular-nums' }, p.odds_over),
+                  h('td', { className: 'px-3 py-2 text-right tabular-nums' }, p.odds_under),
+                  h('td', { className: 'px-3 py-2 text-right tabular-nums text-text-muted' }, implOver != null ? implOver.toFixed(1) + '%' : '—'),
+                  h('td', { className: 'px-3 py-2 text-right tabular-nums text-text-muted' }, implUnder != null ? implUnder.toFixed(1) + '%' : '—'),
+                  h('td', { className: 'px-3 py-2 text-right text-text-muted' }, p.sportsbook || '—'),
+                  h('td', { className: 'px-3 py-2 text-right tabular-nums' }, p.projected_value != null ? p.projected_value.toFixed(2) : '—'),
+                  h('td', { className: 'px-3 py-2 text-right' },
+                    h(EdgeChip, { edge: p.edge })
+                  )
+                );
+              })
+            )
+          )
+        ),
+
+    // Feature 7: Pick Builder Panel
+    picks.length > 0 && h('div', { className: 'bg-surface rounded-lg border border-border-accent p-4' },
+      h('div', { className: 'flex items-center justify-between mb-3' },
+        h('h3', { className: 'text-[14px] font-semibold text-text flex items-center gap-2' },
+          '\uD83D\uDCCB Pick Builder',
+          h('span', { className: 'text-[11px] text-text-muted font-normal' }, `(${picks.length}/5)`)
+        ),
+        h('button', {
+          className: 'text-[11px] text-text-faint hover:text-text',
+          onClick: () => { setPicks([]); setLeans({}); }
+        }, 'Clear All')
+      ),
+      // Picks list
+      h('div', { className: 'space-y-2 mb-3' },
+        ...picks.map((pk, pi) => {
+          const lean = leans[pk._idx];
+          return h('div', { key: pi, className: 'flex items-center gap-2 bg-surface-2 rounded-lg p-2' },
+            h('div', { className: 'flex-1 min-w-0' },
+              h('div', { className: 'text-[12px] font-medium text-text truncate' }, pk.full_name),
+              h('div', { className: 'text-[11px] text-text-muted' },
+                (pk.market || '').replace(/_/g, ' '), ' | Line: ', pk.line
+              )
+            ),
+            // Over/Under lean buttons
+            h('div', { className: 'flex items-center gap-1' },
+              h('button', {
+                className: `px-2 py-0.5 text-[10px] rounded font-medium transition-colors ${lean === 'over' ? 'bg-green text-white' : 'bg-surface-3 text-text-muted border border-border hover:text-text'}`,
+                onClick: () => setLeans({ ...leans, [pk._idx]: lean === 'over' ? null : 'over' })
+              }, 'Over'),
+              h('button', {
+                className: `px-2 py-0.5 text-[10px] rounded font-medium transition-colors ${lean === 'under' ? 'bg-red text-white' : 'bg-surface-3 text-text-muted border border-border hover:text-text'}`,
+                onClick: () => setLeans({ ...leans, [pk._idx]: lean === 'under' ? null : 'under' })
+              }, 'Under')
+            ),
+            h('button', {
+              className: 'text-text-faint hover:text-red text-[14px]',
+              onClick: () => { setPicks(picks.filter((_, i) => i !== pi)); }
+            }, '\u2715')
+          );
+        })
+      ),
+      // Combined probabilities
+      (() => {
+        const impliedProbs = picks.map(pk => {
+          const odds = typeof pk.odds_over === 'string' ? parseInt(pk.odds_over) : pk.odds_over;
+          if (odds == null || isNaN(odds)) return 0.5;
+          if (odds > 0) return 100 / (odds + 100);
+          if (odds < 0) return Math.abs(odds) / (Math.abs(odds) + 100);
+          return 0.5;
+        });
+        const combinedImplied = impliedProbs.reduce((a, b) => a * b, 1);
+        const modelProbs = picks.map(pk => {
+          if (pk.projected_value != null && pk.line != null) {
+            return pk.projected_value > pk.line ? 0.6 : 0.4;
+          }
+          return 0.5;
+        });
+        const combinedModel = modelProbs.reduce((a, b) => a * b, 1);
+        // Spiciness: more legs + lower prob = spicier
+        const spiciness = Math.min(10, Math.round(picks.length * 2 + (1 - combinedImplied) * 5));
+        const spiceEmojis = '\uD83C\uDF36\uFE0F'.repeat(Math.min(5, Math.ceil(spiciness / 2)));
+
+        return h('div', { className: 'grid grid-cols-3 gap-3' },
+          h('div', { className: 'bg-surface-2 rounded-lg p-2 text-center' },
+            h('div', { className: 'text-[10px] text-text-faint' }, 'Combined Implied'),
+            h('div', { className: 'text-[14px] font-bold text-text tabular-nums' }, (combinedImplied * 100).toFixed(1) + '%')
+          ),
+          h('div', { className: 'bg-surface-2 rounded-lg p-2 text-center' },
+            h('div', { className: 'text-[10px] text-text-faint' }, 'Model Probability'),
+            h('div', { className: 'text-[14px] font-bold text-blue tabular-nums' }, (combinedModel * 100).toFixed(1) + '%')
+          ),
+          h('div', { className: 'bg-surface-2 rounded-lg p-2 text-center' },
+            h('div', { className: 'text-[10px] text-text-faint' }, 'Spiciness'),
+            h('div', { className: 'text-[14px]' }, spiceEmojis, h('span', { className: 'text-text-muted text-[11px] ml-1' }, `${spiciness}/10`))
+          )
+        );
+      })()
+    )
+  );
+}
+
+// ─── About Page ─────────────────────────────────────
+function AboutPage() {
+  return h('div', { className: 'max-w-3xl mx-auto space-y-6 fade-in' },
+    h('h1', { className: 'text-[20px] font-bold text-text' }, 'About BarrelVision'),
+
+    h(AboutSection, { title: 'What is Statcast?', content: 'Statcast is MLB\'s tracking technology that captures ball and player movement data at extremely high resolution. It records exit velocity, launch angle, sprint speed, and more for every pitch and batted ball.' }),
+
+    h(AboutSection, { title: 'Key Metrics', content: null },
+      h('dl', { className: 'space-y-2' },
+        ...([
+          ['Exit Velocity (EV)', 'The speed of the ball off the bat, measured in mph. Higher EV correlates strongly with better outcomes — the league average is around 88 mph.'],
+          ['Launch Angle (LA)', 'The vertical angle at which the ball leaves the bat. The "sweet spot" range is 8-32 degrees, where line drives and fly balls produce the best results.'],
+          ['Barrel Rate', 'The percentage of batted ball events that are "barreled" — the ideal combination of exit velocity (≥98 mph) and launch angle (26-30° at 98 mph, wider range at higher EV). Barrels produce a batting average of .822 and a 1.375 slugging percentage.'],
+          ['Hard Hit Rate', 'Percentage of batted balls with exit velocity ≥ 95 mph. A proxy for consistent hard contact.'],
+          ['xwOBA (Expected Weighted On-Base Average)', 'A metric that uses exit velocity and launch angle to estimate the expected value of each batted ball event, removing luck and defense. The best single predictor of future offensive performance.'],
+          ['xBA / xSLG', 'Expected batting average and slugging based on quality of contact, independent of actual outcomes.'],
+          ['Sweet Spot Rate', 'Percentage of batted balls in the 8-32° launch angle range. Higher sweet spot rates indicate better bat-to-ball approach.']
+        ]).map(([term, def]) =>
+          h(Fragment, { key: term },
+            h('dt', { className: 'text-[13px] font-semibold text-blue' }, term),
+            h('dd', { className: 'text-[13px] text-text-muted leading-relaxed ml-0' }, def)
+          )
+        )
+      )
+    ),
+
+    h(AboutSection, { title: 'Projections Model', content: 'Our projection system uses a combination of season-level Statcast metrics (exit velocity, barrel rate, hard hit rate, sweet spot rate) and situational splits to estimate expected outcomes for each game. The model weights recent performance more heavily and adjusts for opposing pitcher handedness and park factors.' }),
+
+    h('div', { className: 'bg-surface rounded-lg border border-border-accent p-4' },
+      h('h3', { className: 'text-[14px] font-semibold text-orange mb-2' }, 'Disclaimer'),
+      h('p', { className: 'text-[13px] text-text-muted leading-relaxed' }, 'BarrelVision is for entertainment and informational purposes only. It is not intended as betting advice. Always gamble responsibly. Projections are estimates based on historical data and statistical models — they are not guarantees of future performance.')
+    ),
+
+    h(AboutSection, { title: 'Data Sources', content: 'All Statcast data is sourced from MLB Statcast via Baseball Savant. Player headshots courtesy of MLB. Prop lines and odds are sourced from publicly available sportsbook data.' })
+  );
+}
+
+function AboutSection({ title, content, children }) {
+  return h('div', { className: 'bg-surface rounded-lg border border-border p-4' },
+    h('h2', { className: 'text-[15px] font-semibold text-text mb-2' }, title),
+    content && h('p', { className: 'text-[13px] text-text-muted leading-relaxed' }, content),
+    children
+  );
+}
+
+// ─── Footer ─────────────────────────────────────────
+function Footer() {
+  return h('footer', { className: 'border-t border-border py-4 px-4 mt-auto' },
+    h('div', { className: 'max-w-[1400px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-text-faint' },
+      h('span', null, '© 2026 BarrelVision — MLB Statcast Analytics'),
+      h('div', { className: 'flex items-center gap-3' },
+        h('span', null, 'Data: Baseball Savant'),
+        h('a', { href: 'https://www.perplexity.ai/computer', target: '_blank', rel: 'noopener noreferrer', className: 'hover:text-text-muted transition-colors' }, 'Created with Perplexity Computer')
+      )
+    )
+  );
+}
+
+// ─── Router ─────────────────────────────────────────
+function Router({ compareIds, setCompareIds }) {
+  const [hash, setHash] = useState(getHash());
+
+  useEffect(() => {
+    const fn = () => setHash(getHash());
+    window.addEventListener('hashchange', fn);
+    return () => window.removeEventListener('hashchange', fn);
+  }, []);
+
+  // Parse route
+  const match = (pattern) => {
+    const parts = pattern.split('/').filter(Boolean);
+    const hashParts = hash.split('/').filter(Boolean);
+    if (parts.length !== hashParts.length) return null;
+    const params = {};
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i].startsWith(':')) params[parts[i].slice(1)] = hashParts[i];
+      else if (parts[i] !== hashParts[i]) return null;
+    }
+    return params;
+  };
+
+  let page;
+  const detailMatch = match('/hitters/:id');
+
+  if (hash === '/' || hash === '') page = h(DashboardPage);
+  else if (hash === '/hitters') page = h(HittersPage, { compareIds, setCompareIds });
+  else if (detailMatch) page = h(HitterDetailPage, { id: detailMatch.id });
+  else if (hash === '/props') page = h(PropsPage);
+  else if (hash === '/compare') page = h(ComparePage, { compareIds });
+  else if (hash === '/about') page = h(AboutPage);
+  else page = h('div', { className: 'text-center py-20 text-text-muted' }, '404 \u2014 Page not found');
+
+  return page;
+}
+
+// ─── App ────────────────────────────────────────────
+function App() {
+  const [compareIds, setCompareIds] = useState([]);
+  const [tourActive, setTourActive] = useState(false);
+
+  return h('div', { className: 'h-screen flex flex-col' },
+    h(Navbar, { onTourStart: () => setTourActive(true), compareCount: compareIds.length }),
+    h('main', { className: 'flex-1 overflow-y-auto overflow-x-hidden', style: { overscrollBehavior: 'contain' } },
+      h('div', { className: 'max-w-[1400px] mx-auto px-4 py-4' },
+        h(Router, { compareIds, setCompareIds })
+      ),
+      h(Footer)
+    ),
+    h(GuidedTour, { active: tourActive, onClose: () => setTourActive(false) })
+  );
+}
+
+// ─── Mount ──────────────────────────────────────────
+const root = createRoot(document.getElementById('root'));
+root.render(h(App));
+
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+[build]
+  publish = "."
+  command = "echo 'No build needed'"
+
+# Proxy all /api/* calls to the Render backend.
+# Set BACKEND_URL in Netlify environment variables to your Render URL.
+# Example: https://barrelvision-api.onrender.com
+[[redirects]]
+  from = "/api/*"
+  to = "${BACKEND_URL}/api/:splat"
+  status = 200
+  force = true
+
+# SPA fallback — all other routes serve index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
