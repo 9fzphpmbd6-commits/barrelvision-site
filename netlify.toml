@@ -2,22 +2,16 @@
   publish = "."
   functions = "netlify/functions"
 
-# Redirect all non-file requests to index.html for SPA routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = {Role = ["admin", "editor", "viewer"]}
-
-# But NOT for API files or functions
+# Serve API JSON files directly
 [[redirects]]
   from = "/api/*"
   to = "/api/:splat"
   status = 200
 
+# SPA fallback - all other routes serve index.html
 [[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
+  from = "/*"
+  to = "/index.html"
   status = 200
 
 [functions."daily-refresh"]
