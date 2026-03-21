@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Barrel or Bust | BarrelVision Daily Game</title>
+<meta property="og:title" content="Barrel or Bust - Daily MLB Game">
+<meta property="og:description" content="Can you guess which player has the higher barrel rate? A new challenge every day.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #0c1220; color: #f1f5f9; font-family: 'Inter', sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+a { color: inherit; text-decoration: none; }
+:root { --bg: #0c1220; --surface: #141c2e; --card: #1a2439; --card-border: rgba(255,255,255,0.06); --red: #ef4444; --blue: #38bdf8; --green: #22c55e; --amber: #f59e0b; --text: #f1f5f9; --muted: #94a3b8; --faint: #64748b; }
+.navbar { position: sticky; top: 0; z-index: 100; background: rgba(12,18,32,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--card-border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: center; }
+.navbar-inner { max-width: 1200px; width: 100%; display: flex; align-items: center; justify-content: space-between; }
+.navbar-logo { font-size: 18px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; }
+.navbar-logo span { color: var(--red); }
+.nav-link { font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 6px; cursor: pointer; color: var(--muted); text-decoration: none; }
+.nav-link:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+.nav-link.active { color: var(--text); background: rgba(255,255,255,0.08); border: 1px solid var(--red); }
+.container { max-width: 700px; margin: 0 auto; padding: 0 24px; }
+.game-header { text-align: center; padding: 48px 0 32px; }
+.game-header h1 { font-size: 36px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; }
+.game-header h1 span { color: var(--red); }
+.game-header p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+.game-round { font-size: 13px; color: var(--faint); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-top: 12px; }
+.matchup { display: grid; grid-template-columns: 1fr 60px 1fr; gap: 0; align-items: center; margin: 32px 0; }
+.matchup-vs { text-align: center; font-size: 20px; font-weight: 800; color: var(--red); }
+.player-card { background: var(--card); border: 2px solid var(--card-border); border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s ease; }
+.player-card:hover { border-color: var(--blue); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(56,189,248,0.15); }
+.player-card.correct { border-color: var(--green); background: rgba(34,197,94,0.08); }
+.player-card.wrong { border-color: var(--red); background: rgba(239,68,68,0.08); }
+.player-card.revealed { cursor: default; }
+.player-card.revealed:hover { transform: none; box-shadow: none; }
+.player-card img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,0.05); border: 2px solid var(--card-border); margin-bottom: 12px; }
+.player-card .name { font-size: 16px; font-weight: 700; }
+.player-card .team { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.player-card .stat-hint { font-size: 13px; color: var(--faint); margin-top: 8px; }
+.player-card .barrel-reveal { font-size: 28px; font-weight: 800; color: var(--blue); margin-top: 8px; font-variant-numeric: tabular-nums; }
+.score-bar { display: flex; justify-content: center; gap: 8px; margin: 24px 0; }
+.score-dot { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--card-border); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; }
+.score-dot.correct { background: rgba(34,197,94,0.2); border-color: var(--green); color: var(--green); }
+.score-dot.wrong { background: rgba(239,68,68,0.2); border-color: var(--red); color: var(--red); }
+.score-dot.pending { opacity: 0.3; }
+.results-card { background: var(--card); border: 1px solid var(--card-border); border-radius: 12px; padding: 32px; text-align: center; margin: 32px 0; }
+.results-card h2 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+.results-card .final-score { font-size: 48px; font-weight: 800; color: var(--blue); margin: 16px 0; }
+.results-card .emoji-grid { font-size: 24px; letter-spacing: 4px; margin: 16px 0; }
+.share-btns { display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
+.share-btn { padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; border: none; transition: all 0.2s ease; }
+.share-btn.copy { background: var(--surface); border: 1px solid var(--card-border); color: var(--text); }
+.share-btn.copy:hover { border-color: rgba(255,255,255,0.2); }
+.share-btn.twitter { background: #1d9bf0; color: #fff; }
+.share-btn.twitter:hover { background: #1a8cd8; }
+.share-btn.play-again { background: var(--red); color: #fff; }
+.share-btn.play-again:hover { opacity: 0.9; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); padding: 8px 0; margin-top: 16px; }
+.back-link:hover { color: var(--text); }
+.footer { margin-top: 56px; padding: 32px 0; border-top: 2px solid var(--red); background: var(--surface); text-align: center; }
+.footer p { font-size: 13px; color: var(--muted); }
+.loading { display: flex; flex-direction: column; align-items: center; padding: 80px 0; gap: 16px; }
+.spinner { width: 40px; height: 40px; border: 3px solid var(--card-border); border-top-color: var(--red); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.3s ease; }
+.tap-hint { font-size: 12px; color: var(--faint); text-align: center; margin-top: -16px; margin-bottom: 24px; font-style: italic; }
+@media (max-width: 600px) {
+  .game-header h1 { font-size: 24px; }
+  .matchup { grid-template-columns: 1fr 40px 1fr; }
+  .player-card { padding: 16px; }
+  .player-card img { width: 64px; height: 64px; }
+  .player-card .name { font-size: 14px; }
+  .results-card .final-score { font-size: 36px; }
+}
+</style>
+</head>
+<body>
+<nav class="navbar"><div class="navbar-inner">
+<a class="navbar-logo" href="./">BARREL<span>VISION</span></a>
+<div style="display:flex;gap:8px;align-items:center;">
+<a class="nav-link" href="./">Home</a>
+<a class="nav-link" href="./#/players">Players</a>
+<a class="nav-link active" href="./barrel-or-bust.html">Barrel or Bust</a>
+</div>
+</div></nav>
+<div class="container">
+<div id="game"></div>
+</div>
+<div class="footer"><p>BarrelVision &copy; 2025 &mdash; MLB Statcast Analytics</p></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script>
+var h = React.createElement;
+var useState = React.useState, useEffect = React.useEffect, useMemo = React.useMemo, useCallback = React.useCallback;
+
+var ROUNDS = 5;
+var HEADSHOT = 'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/';
+
+function getDaySeed() {
+  var d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth()+1) * 100 + d.getDate();
+}
+
+function seededRandom(seed) {
+  var x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+function generateDailyMatchups(batters) {
+  var eligible = batters.filter(function(b) { return b.barrel_rate && b.barrel_rate > 0 && b.pa >= 200; });
+  if (eligible.length < ROUNDS * 2) return [];
+  var seed = getDaySeed();
+  var shuffled = eligible.slice();
+  for (var i = shuffled.length - 1; i > 0; i--) {
+    seed++;
+    var j = Math.floor(seededRandom(seed) * (i + 1));
+    var temp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = temp;
+  }
+  var matchups = [];
+  for (var r = 0; r < ROUNDS; r++) {
+    var a = shuffled[r * 2];
+    var b = shuffled[r * 2 + 1];
+    matchups.push([a, b]);
+  }
+  return matchups;
+}
+
+function getStorageKey() { return 'bob_' + getDaySeed(); }
+
+function loadProgress() {
+  try {
+    var saved = localStorage.getItem(getStorageKey());
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return null;
+}
+
+function saveProgress(results) {
+  try { localStorage.setItem(getStorageKey(), JSON.stringify(results)); } catch(e) {}
+}
+
+function BarrelOrBust() {
+  var _b = useState(null), batters = _b[0], setBatters = _b[1];
+  var _l = useState(true), loading = _l[0], setLoading = _l[1];
+  var _r = useState([]), results = _r[0], setResults = _r[1];
+  var _rev = useState(false), revealed = _rev[0], setRevealed = _rev[1];
+  var _done = useState(false), gameOver = _done[0], setGameOver = _done[1];
+  var _copied = useState(false), copied = _copied[0], setCopied = _copied[1];
+
+  useEffect(function() {
+    fetch('./api/batters.json')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        setBatters(data);
+        var saved = loadProgress();
+        if (saved && saved.length > 0) {
+          setResults(saved);
+          if (saved.length >= ROUNDS) setGameOver(true);
+        }
+        setLoading(false);
+      })
+      .catch(function() { setLoading(false); });
+  }, []);
+
+  var matchups = useMemo(function() {
+    if (!batters) return [];
+    return generateDailyMatchups(batters);
+  }, [batters]);
+
+  var currentRound = results.length;
+
+  var handlePick = useCallback(function(pickIdx) {
+    if (revealed || gameOver || currentRound >= ROUNDS) return;
+    setRevealed(true);
+    var match = matchups[currentRound];
+    var a = match[0], b = match[1];
+    var correct = a.barrel_rate >= b.barrel_rate ? 0 : 1;
+    var isCorrect = pickIdx === correct;
+    var newResults = results.concat([isCorrect]);
+
+    setTimeout(function() {
+      setResults(newResults);
+      saveProgress(newResults);
+      setRevealed(false);
+      if (newResults.length >= ROUNDS) setGameOver(true);
+    }, 1800);
+  }, [revealed, gameOver, currentRound, matchups, results]);
+
+  var score = results.filter(Boolean).length;
+
+  var emojiGrid = results.map(function(r) { return r ? '\u2705' : '\u274C'; }).join('');
+
+  var shareText = 'Barrel or Bust \uD83D\uDEE2\uFE0F ' + getDaySeed() + '\n' + score + '/' + ROUNDS + '\n' + emojiGrid + '\nupperrdecky.com/barrel-or-bust.html';
+
+  function copyResults() {
+    navigator.clipboard.writeText(shareText).then(function() {
+      setCopied(true);
+      setTimeout(function() { setCopied(false); }, 2000);
+    });
+  }
+
+  function shareTwitter() {
+    var url = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText);
+    window.open(url, '_blank');
+  }
+
+  if (loading) {
+    return h('div', {className: 'loading'}, h('div', {className: 'spinner'}), h('p', {style:{color:'var(--muted)'}}, 'Loading players...'));
+  }
+
+  if (!matchups.length) {
+    return h('div', {style:{textAlign:'center',padding:'80px 0',color:'var(--muted)'}}, 'Could not load game data.');
+  }
+
+  if (gameOver) {
+    var msg = score === ROUNDS ? 'PERFECT GAME!' : score >= 4 ? 'ALL-STAR!' : score >= 3 ? 'SOLID CONTACT' : score >= 2 ? 'FOUL BALL' : 'STRUCK OUT';
+    return h('div', {className: 'fade-in'},
+      h('div', {className: 'game-header'},
+        h('h1', null, 'BARREL OR ', h('span', null, 'BUST')),
+        h('p', null, 'Daily barrel rate challenge')
+      ),
+      h('div', {className: 'score-bar'},
+        results.map(function(r, i) {
+          return h('div', {key: i, className: 'score-dot ' + (r ? 'correct' : 'wrong')}, r ? '\u2713' : '\u2717');
+        })
+      ),
+      h('div', {className: 'results-card'},
+        h('h2', null, msg),
+        h('div', {className: 'final-score'}, score + '/' + ROUNDS),
+        h('div', {className: 'emoji-grid'}, emojiGrid),
+        h('p', {style:{color:'var(--muted)', fontSize:13, marginTop:8}}, 'New game tomorrow at midnight!'),
+        h('div', {className: 'share-btns'},
+          h('button', {className: 'share-btn copy', onClick: copyResults}, copied ? '\u2705 Copied!' : '\uD83D\uDCCB Copy Results'),
+          h('button', {className: 'share-btn twitter', onClick: shareTwitter}, '\uD83D\uDC26 Share on X'),
+          h('a', {className: 'share-btn play-again', href: './'}, '\u2190 Back to BarrelVision')
+        )
+      )
+    );
+  }
+
+  var match = matchups[currentRound];
+  var pA = match[0], pB = match[1];
+
+  function cardClass(idx) {
+    if (!revealed) return 'player-card';
+    var correct = pA.barrel_rate >= pB.barrel_rate ? 0 : 1;
+    var cls = 'player-card revealed ';
+    if (idx === correct) cls += 'correct';
+    else cls += 'wrong';
+    return cls;
+  }
+
+  return h('div', {className: 'fade-in'},
+    h('div', {className: 'game-header'},
+      h('h1', null, 'BARREL OR ', h('span', null, 'BUST')),
+      h('p', null, 'Who has the higher barrel rate? Tap to pick.'),
+      h('div', {className: 'game-round'}, 'Round ' + (currentRound + 1) + ' of ' + ROUNDS)
+    ),
+    h('div', {className: 'score-bar'},
+      Array.from({length: ROUNDS}, function(_, i) {
+        if (i < results.length) return h('div', {key:i, className:'score-dot '+(results[i]?'correct':'wrong')}, results[i]?'\u2713':'\u2717');
+        if (i === currentRound) return h('div', {key:i, className:'score-dot', style:{borderColor:'var(--blue)'}}, '\u2022');
+        return h('div', {key:i, className:'score-dot pending'}, '');
+      })
+    ),
+    h('p', {className:'tap-hint'}, revealed ? 'Next round loading...' : '\u2191 Tap a player to pick \u2191'),
+    h('div', {className: 'matchup'},
+      h('div', {className: cardClass(0), onClick: function(){handlePick(0);}},
+        h('img', {src: pA.headshot_url || HEADSHOT + pA.batter_id + '/headshot/67/current', alt: pA.full_name}),
+        h('div', {className:'name'}, pA.full_name),
+        h('div', {className:'team'}, pA.team + ' \u00B7 ' + pA.position),
+        h('div', {className:'stat-hint'}, pA.home_runs + ' HR \u00B7 ' + (pA.avg_launch_speed ? pA.avg_launch_speed.toFixed(1) : '?') + ' mph EV'),
+        revealed && h('div', {className:'barrel-reveal'}, pA.barrel_rate.toFixed(1) + '% BRL')
+      ),
+      h('div', {className: 'matchup-vs'}, 'VS'),
+      h('div', {className: cardClass(1), onClick: function(){handlePick(1);}},
+        h('img', {src: pB.headshot_url || HEADSHOT + pB.batter_id + '/headshot/67/current', alt: pB.full_name}),
+        h('div', {className:'name'}, pB.full_name),
+        h('div', {className:'team'}, pB.team + ' \u00B7 ' + pB.position),
+        h('div', {className:'stat-hint'}, pB.home_runs + ' HR \u00B7 ' + (pB.avg_launch_speed ? pB.avg_launch_speed.toFixed(1) : '?') + ' mph EV'),
+        revealed && h('div', {className:'barrel-reveal'}, pB.barrel_rate.toFixed(1) + '% BRL')
+      )
+    )
+  );
+}
+
+var root = ReactDOM.createRoot(document.getElementById('game'));
+root.render(h(BarrelOrBust));
+</script>
+</body>
+</html>
