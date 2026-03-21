@@ -2,6 +2,18 @@
   publish = "."
   functions = "netlify/functions"
 
+# Serve robots.txt directly
+[[redirects]]
+  from = "/robots.txt"
+  to = "/robots.txt"
+  status = 200
+
+# Serve sitemap via Netlify function
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/.netlify/functions/sitemap"
+  status = 200
+
 # Serve API JSON files directly
 [[redirects]]
   from = "/api/*"
