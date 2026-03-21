@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /players
+Allow: /player/
+Allow: /team/
+Allow: /compare
+Allow: /leaderboard/
+Allow: /scatter
+Allow: /barrel-or-bust.html
+Disallow: /api/
+
+Sitemap: https://www.upperrdecky.com/sitemap.xml
