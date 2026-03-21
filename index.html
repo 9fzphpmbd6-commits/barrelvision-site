@@ -1346,7 +1346,7 @@ function Navbar() {
         h('div', {className:'navbar-links'},
           h('a', {className:'nav-link' + (hash==='/' ? ' active' : ''), onClick: function(){navigate('/')}}, 'Home'),
           h('a', {className:'nav-link' + (hash.startsWith('/players') ? ' active' : ''), onClick: function(){navigate('/players')}}, 'Players'),
-          h('a', {className:'nav-link' + (hash==='/compare' ? ' active' : ''), onClick: function(){navigate('/compare')}}, 'Compare'),
+          h('a', {className:'nav-link' + (hash==='/compare' ? ' active' : ''), onClick: function(){navigate('/compare')}}, 'Compare'), h('a', {className:'nav-link', href:'./barrel-or-bust.html'}, 'Barrel or Bust'),
           h('div', {className:'nav-dropdown', ref: dropRef},
             h('a', {className:'nav-link' + (statsOpen ? ' active' : ''), onClick: function(e){e.stopPropagation();setStatsOpen(!statsOpen);}}, 'Stats ▾'),
             statsOpen && h('div', {className:'nav-dropdown-menu'},
@@ -1366,7 +1366,7 @@ function Navbar() {
     h('div', {className:'mobile-menu' + (mobileOpen ? ' open' : '')},
       h('div', {className:'mobile-menu-link', onClick: function(){navigate('/')}}, 'Home'),
       h('div', {className:'mobile-menu-link', onClick: function(){navigate('/players')}}, 'Players'),
-      h('div', {className:'mobile-menu-link', onClick: function(){navigate('/compare')}}, 'Compare'),
+      h('div', {className:'mobile-menu-link', onClick: function(){navigate('/compare')}}, 'Compare'), h('a', {className:'nav-link', href:'./barrel-or-bust.html'}, 'Barrel or Bust'),
       h('div', {className:'mobile-divider'}),
       h('div', {className:'mobile-section-label'}, 'Fun Stats'),
       funStats.map(function(s) {
