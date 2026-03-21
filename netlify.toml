@@ -8,6 +8,12 @@
   to = "/robots.txt"
   status = 200
 
+  # Serve Google verification file directly
+[[redirects]]
+  from = "/googlecf85f8853f5fe5f9.html"
+  to = "/googlecf85f8853f5fe5f9.html"
+  status = 200
+
 # Serve sitemap via Netlify function
 [[redirects]]
   from = "/sitemap.xml"
