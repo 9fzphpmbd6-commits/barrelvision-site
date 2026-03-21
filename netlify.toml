@@ -20,13 +20,44 @@
   to = "/api/:splat"
   status = 200
 
-  # Serve barrel-or-bust.html directly
+# Serve barrel-or-bust.html directly
 [[redirects]]
   from = "/barrel-or-bust.html"
   to = "/barrel-or-bust.html"
   status = 200
 
-# SPA fallback - all other routes serve index.html
+# SEO-aware routing for dynamic pages
+[[redirects]]
+  from = "/player/*"
+  to = "/.netlify/functions/seo-render"
+  status = 200
+
+[[redirects]]
+  from = "/team/*"
+  to = "/.netlify/functions/seo-render"
+  status = 200
+
+[[redirects]]
+  from = "/leaderboard/*"
+  to = "/.netlify/functions/seo-render"
+  status = 200
+
+[[redirects]]
+  from = "/players"
+  to = "/.netlify/functions/seo-render"
+  status = 200
+
+[[redirects]]
+  from = "/compare"
+  to = "/.netlify/functions/seo-render"
+  status = 200
+
+[[redirects]]
+  from = "/scatter"
+  to = "/.netlify/functions/seo-render"
+  status = 200
+
+# SPA fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -40,3 +71,9 @@
   [headers.values]
     Cache-Control = "public, max-age=3600"
     Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
